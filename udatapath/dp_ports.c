@@ -1,5 +1,5 @@
 /* 
- * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP).
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
  * Copyright (c) 2020.
  * 
  * This program is free software: you can redistribute it and/or modify  
@@ -38,6 +38,12 @@
 
 #include "vlog.h"
 #define LOG_MODULE VLM_dp_ports
+
+/*Modificaciones UAH*/
+uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
+bool local_port_ok = false;
+uint64_t time_init_local_port = 0;
+/*+++FIN+++*/
 
 static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(60, 60);
 
@@ -217,6 +223,13 @@ dp_ports_run(struct datapath *dp) {
 
     struct sw_port *p, *pn;
 
+    /*Modificacion UAH*/
+    uint64_t tiempo_transcurrido = 0;
+    struct in_addr ip_if;
+    uint32_t old_local_port;
+    uint8_t mac[ETH_ADDR_LEN];
+    /*+++FIN+++*/
+
 #if defined(OF_HW_PLAT) && !defined(USE_NETDEV)
     { /* Process packets received from callback thread */
         struct ofpbuf *buffer;
@@ -249,15 +262,54 @@ dp_ports_run(struct datapath *dp) {
         if (link_state == NETDEV_LINK_UP){
             p->conf->state &= ~OFPPS_LINK_DOWN;
             dp_port_live_update(p);
+            /*Modificaciones UAH
+            if (p->conf->port_no != OFPP_LOCAL)
+            {
+                enable_valid_amacs_UAH(&table_AMAC, p->conf->port_no); //Se reactivan las amacs válidas si estaban desactivadas
+                visualizar_tabla_AMAC(&table_AMAC, dp->id);
+            }
+            +++FIN+++*/
         }
         else if (link_state == NETDEV_LINK_DOWN){
+            VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Estado del puerto %s (%u) = %d", p->conf->name, p->conf->port_no, link_state);
             p->conf->state |= OFPPS_LINK_DOWN;
             dp_port_live_update(p);
+            VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Se ha caído la interfaz %s (%u)", p->conf->name, p->conf->port_no);
+
+            /*Modificaciones UAH*/
+            tiempo_transcurrido = time_msec() - time_init_local_port;
+            if (p->conf->port_no == OFPP_LOCAL || (tiempo_transcurrido < 5000)) //3000ms = 3s; Se puede especificar otro valor
+            {
+                continue;
+            }
+
+            if (dp->local_port != NULL && local_port_ok)
+            {
+                if (!strcmp(p->conf->name, dp->local_port->conf->name) && (dp->id != 1))
+                {
+                    local_port_ok = false;
+                    old_local_port = p->conf->port_no;
+                    memcpy(mac, netdev_get_etheraddr(dp->local_port->netdev), ETH_ADDR_LEN);
+                    ip_if = remove_local_port_UAH(dp);
+                    configure_new_local_port_ehddp_UAH(dp,&ip_if, mac, old_local_port);
+                    VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Se ha configurado el nuevo puerto local >>%s<<", dp->local_port->conf->name);
+                    time_init_local_port = 0;
+                }
+            }
+            /*+++FIN+++*/
         }
 
         if (IS_HW_PORT(p)) {
             continue;
         }
+        /*Modificaciones UAH */
+        if (p->conf->port_no == OFPP_LOCAL)
+        {
+            continue;
+        }
+
+        //+++FIN+++//
+
         if (buffer == NULL) {
             /* Allocate buffer with some headroom to add headers in forwarding
              * to the controller or adding a vlan tag, plus an extra 2 bytes to
@@ -272,6 +324,23 @@ dp_ports_run(struct datapath *dp) {
             // process_buffer takes ownership of ofpbuf buffer
             process_buffer(dp, p, buffer);
             buffer = NULL;
+
+            /*Modificaciones UAH*/
+            /*Se comprueba si se ha recibido paquetes en la interfaz configurada como puerto local para poder dar por finalizada la configuración del puerto local*/
+            if (dp->local_port != NULL && !strcmp(p->conf->name, dp->local_port->conf->name))
+            {
+
+                link_state = netdev_link_state(dp->local_port->netdev);
+                if (link_state != NETDEV_LINK_DOWN && !local_port_ok)
+                {
+                    VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: El nuevo puerto local >> %s << está operativo.", dp->local_port->conf->name);
+
+                    local_port_ok = true; //Si se ha recibido paquetes a través de la interfaz configurada como nuevo puerto local
+                                          //se considera que ha finalizado la configuración del nuevo puerto local
+                }
+            }
+            /*+++FIN+++*/
+
         } else if (error != EAGAIN) {
             VLOG_ERR_RL(LOG_MODULE, &rl, "error receiving data from %s: %s",
                         netdev_get_name(p->netdev), strerror(error));
@@ -319,6 +388,11 @@ new_port(struct datapath *dp, struct sw_port *port, uint32_t port_no,
         /* Generally the device has to be down before we change its hardware
          * address.  Don't bother to check for an error because it's really
          * the netdev_set_etheraddr() call below that we care about. */
+
+        /*Modificaciones UAH*/
+        memcpy(old_local_port_MAC, netdev_get_etheraddr(netdev), ETH_ADDR_LEN); //Guardamos la MAC inicial del puerto que va a ser configurado como local
+        /*+++FIN+++*/
+
         netdev_set_flags(netdev, 0, false);
         error = netdev_set_etheraddr(netdev, new_mac);
         if (error) {
@@ -373,6 +447,14 @@ new_port(struct datapath *dp, struct sw_port *port, uint32_t port_no,
     port->conf->peer       = netdev_get_features(netdev, NETDEV_FEAT_PEER);
     port->conf->curr_speed = port_speed(port->conf->curr);
     port->conf->max_speed  = port_speed(port->conf->supported);
+
+    //+++Modificaciones UAH+++//
+    // Se configura el bit OFPPC_NO_FWD para que no se use el puerto local con OFPP_FLOOD
+    if (port_no == OFPP_LOCAL)
+    {
+        port->conf->config |= OFPPC_NO_FWD;
+    }
+    //++++++//
 
     if (IS_HW_PORT(p)) {
 #if defined(OF_HW_PLAT) && !defined(USE_NETDEV)
@@ -513,6 +595,9 @@ dp_ports_add_local(struct datapath *dp, const char *netdev)
         eth_addr_from_uint64(dp->id, ea);
         error = new_port(dp, port, OFPP_LOCAL, netdev, ea, 0);
         if (!error) {
+            /*Modificación UAH*/
+            time_init_local_port = time_msec();
+            /*+++FIN+++*/
             dp->local_port = port;
         } else {
             free(port);
@@ -636,9 +721,17 @@ dp_ports_output_all(struct datapath *dp, struct ofpbuf *buffer, int in_port, boo
     struct sw_port *p;
 
     LIST_FOR_EACH (p, struct sw_port, node, &dp->port_list) {
-        if (p->stats->port_no == in_port) {
+         /*Modificación UAH*/
+        // if (p->stats->port_no == in_port){
+        if (p->conf->port_no == in_port) {
             continue;
         }
+        // Se comparan los nombres de los puertos porque el el puerto local y otro puerto físico comparten la misma interfaz)
+        if (in_port == OFPP_LOCAL && !strcmp(p->conf->name, dp->local_port->conf->name)) 
+        {
+            continue;
+        }
+        /*FIN Modificación UAH*/
         if (flood && p->conf->config & OFPPC_NO_FWD) {
             continue;
         }
@@ -1469,21 +1562,6 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 	log_uah(mac_tabla,id_datapath);
 }
 
-void log_count_request_pks(const void *Mensaje){
-    FILE * file;
-	
-	VLOG_DBG_RL(LOG_MODULE, &rl, "Traza UAH -> Entro a Crear Log");
-    file=fopen("/tmp/count_request_packets.log","a");
-	if(file != NULL)
-	{
-        file = fopen( "/tmp/count_request_packets.log" , "a" );
-		fputs(Mensaje, file);
-		fclose(file);
-    }
-	else
-		VLOG_DBG_RL(LOG_MODULE, &rl, "Traza UAH -> Archivo no abierto");
-}
-
 void log_uah(const void *Mensaje, int64_t id)
 {
 
@@ -1500,7 +1578,7 @@ void log_uah(const void *Mensaje, int64_t id)
 		if(ftell(file) > 16000)
 		{
 			fclose(file);
-			sprintf(nombre2,"/tmp/DHT_switch_%d-%lu.log",(int)id,(long)time_msec());
+			sprintf(nombre2,"/tmp/ehddp_switch_%d-%lu.log",(int)id,(long)time_msec());
 			rename(nombre,nombre2);
 		}
 		file = fopen( nombre , "a" );
@@ -1511,6 +1589,78 @@ void log_uah(const void *Mensaje, int64_t id)
 		VLOG_DBG_RL(LOG_MODULE, &rl, "Traza UAH -> Archivo no abierto");
 }
 
+struct in_addr remove_local_port_UAH(struct datapath *dp)
+{
+    int error;
+    struct in_addr ip_0 = {INADDR_ANY}, ip_if;                                //Para poner a 0 la ip de la interfaz a eliminar
+    netdev_get_in4(dp->local_port->netdev, &ip_if);                           //Se obtiene la ip de la interfaz
+    netdev_set_in4(dp->local_port->netdev, ip_0, ip_0);                       //Se configura la ip a 0
+    error = netdev_set_etheraddr(dp->local_port->netdev, old_local_port_MAC); //Se asigna la antigua MAC
+    if (error)
+    {
+        VLOG_WARN(LOG_MODULE, "failed to change %s Ethernet address to " ETH_ADDR_FMT ": %s",
+                  dp->local_port->conf->name, ETH_ADDR_ARGS(old_local_port_MAC), strerror(error));
+    }
+
+    list_pop_back(&dp->port_list); //Se elimina el último puerto (puerto_local) de la lista
+
+    free(dp->local_port->conf);
+    free(dp->local_port->stats);
+    free(dp->local_port); //Se libera la memoria del peurto local
+
+    dp->ports_num--; //Se decrementa el número de puertos
+    dp->local_port = NULL;
+
+    return ip_if;
+}
+
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, uint8_t *mac, uint32_t old_local_port)
+{
+    int error;
+    struct sw_port *p;
+    struct mac_port_time *aux = bt_table.inicio;
+    char ip_aux[INET_ADDRSTRLEN];
+    struct in_addr mask, local_ip = *ip;
+    while (aux != NULL)
+    {
+        p = dp_ports_lookup(dp, aux->port_in);
+        error = dp_ports_add_local(dp, p->conf->name);
+        inet_pton(AF_INET, "255.255.255.0", &(mask.s_addr));
+        inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
+        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Antiguo puerto local (%u)\tNuevo puerto local %s(%u)", old_local_port, 
+            p->conf->name, p->conf->port_no);
+        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s (mask: %s)", ip_aux, "255.255.255.0");
+        netdev_set_in4(dp->local_port->netdev, local_ip, mask); //Se configura la ip del nuevo puerto local
+        if (error || !netdev_get_in4(dp->local_port->netdev, &local_ip))
+        {
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: No se ha configurado correctamente el nuevo puero local!!");
+            inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s", ip_aux);
+
+            return 1;
+        }
+        //Se envía al ofprotocol el nuevo puerto local
+        send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
+        return 0;
+        
+        //actual pasa a ser el siguiente
+        aux = aux->next;
+    }
+    return 1;
+}
+
+uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name)
+{
+    struct sw_port *p;
+    LIST_FOR_EACH(p, struct sw_port, node, &dp->port_list)
+    {
+        if (!strcmp(p->conf->name, netdev_name))
+        {
+            return p->conf->port_no;
+        }
+    }
+    return 0;
+}
 
 
-/*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
+/*Fin Modificacion UAH eHDDP, JAH-*/

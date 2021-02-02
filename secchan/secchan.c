@@ -1,34 +1,18 @@
-/* Copyright (c) 2008, 2009 The Board of Trustees of The Leland Stanford
- * Junior University
+/* 
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
+ * Copyright (c) 2020.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
  *
- * We are making the OpenFlow specification and associated documentation
- * (Software) available for public use and benefit with the expectation
- * that others will use, modify and enhance the Software and contribute
- * those enhancements back to the community. However, since we would
- * like to make the Software available for broadest use, with as few
- * restrictions as possible permission is hereby granted, free of
- * charge, to any person obtaining a copy of this Software to deal in
- * the Software under the copyrights without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- * The name and trademarks of copyright holder(s) may NOT be used in
- * advertising or publicity pertaining to the Software or any
- * derivatives without specific, written prior permission.
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <config.h>
@@ -67,18 +51,14 @@
 #include "vlog-socket.h"
 #include "vlog.h"
 
-// // MODIFICACIÓNBOBY UAH
+// // MODIFICACIÓN UAH
 #include "../oflib/ofl-messages.h"
 #include "../oflib/oxm-match.h"
 #include "../oflib/ofl-print.h"
-// #include "../oflib/ofl-print.h"
-// #include "../oflib/ofl.h"
-// #include "../oflib/ofl-utils.h"
-// #include "../oflib/ofl-actions.h"
 #include "../oflib/ofl-structs.h"
-// #include "/home/boby/dev_ofsoftswitch/oflib/ofl-structs.h"
-// #include "../oflib-exp/ofl-exp.h"
+
 bool in_band_rules = false; // Flag que indica si se han instalado las reglas in-band
+uint16_t of_port = 0;
 /////
 
 #define LOG_MODULE VLM_secchan
@@ -304,10 +284,12 @@ int main(int argc, char *argv[])
                 }
             }
         }
-        //Modificaciones Boby UAH//
+        //Modificaciones UAH//
         if (s.in_band && !in_band_rules && rconn_is_connected(local_rconn) && get_pw_local_port_number_UAH(pw))
         {
-            install_in_band_rules_UAH(local_rconn, secchan.hooks[2].aux);
+            of_port = get_of_port_UAH(s.controller_names[0]);  // Se obtiene el puerto al que se establece la conexión OpenFlow
+            VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Puerto obtenido %d", of_port);
+            install_in_band_rules_UAH(local_rconn, secchan.hooks[2].aux, of_port);
             in_band_rules = true;
         }
         /*+++FIN+++*/
@@ -961,7 +943,7 @@ usage(void)
     exit(EXIT_SUCCESS);
 }
 
-//***Modificaciones boby UAH***//
+//***Modificaciones UAH***//
 struct ofl_msg_packet_in *get_ofl_packet_in_UAH(struct relay *r, uint32_t *in_port, struct ofpbuf **buf)
 {
     struct ofpbuf *msg = r->halves[HALF_LOCAL].rxbuf;
@@ -990,7 +972,7 @@ struct ofl_msg_packet_in *get_ofl_packet_in_UAH(struct relay *r, uint32_t *in_po
 bool get_ofp_packet_eth_header_UAH(struct relay *r, struct ofl_msg_packet_in **opip, struct eth_header **ethp, uint32_t *in_port, struct ofpbuf **buf)
 {
     const int min_len = 0; //offsetof(struct ofp_packet_in, data) + ETH_HEADER_LEN;
-    //**Modificaciones boby UAH**//
+    //**Modificaciones UAH**//
     struct ofpbuf b;
     struct eth_header *eth;
     struct ofl_msg_packet_in *oflpi = get_ofl_packet_in_UAH(r, in_port, buf);
@@ -1017,28 +999,28 @@ bool get_ofp_packet_eth_header_UAH(struct relay *r, struct ofl_msg_packet_in **o
     return false;
 }
 
-// void get_ofl_packet_payload_UAH(struct ofl_msg_packet_in *oflpi ,struct ofpbuf *payload ){
-//     // struct ofl_msg_packet_in pin=*oflpi;
-//     payload->data = oflpi->data;
-//     payload->size = oflpi->data_length;
-//     // payload->size = ntohs(oflpi->header.length) - offsetof(struct ofl_msg_packet_in, data);
-// }
+uint16_t get_of_port_UAH(const char *controller_str)
+{
+    char *str = NULL, *str_aux = NULL, *controller_str_aux = NULL;
+    int i;
+    uint16_t connection_port = 0;
+    // VLOG_WARN(LOG_MODULE, "[SECCHAN main]: Parámetros controlador %s", controller_str);
+    controller_str_aux = xstrdup(controller_str);
+    //controller_str contiene un string del estilo tcp:10.0.0.88:6653 por lo que se hace un split del string y se guarda el ultimo bloque
+    for (str = strtok_r(controller_str_aux, ":", &str_aux), i = 0;
+         str != NULL;
+         str = strtok_r(NULL, ":", &str_aux), ++i)
+    {
+        VLOG_WARN(LOG_MODULE, "[SECCHAN main]: %s", str);
 
-// void create_in_band_match(struct ofl_match *match_ib,uint16_t eth_type,uint32_t ip_ctrl)
-// {
-//     switch(eth_type)
-//     {
-//         case ETH_TYPE_ARP:
-//         {
-//             ofl_structs_match_put16(match_ib, OXM_OF_ETH_TYPE, eth_type);
-//             ofl_structs_match_put32(match_ib, OXM_OF_ARP_TPA, ip_ctrl); //IP Target Controlador
-//         }
-//         case ETH_TYPE_IP:
-//         {
-//             ofl_structs_match_put16(match_ib, OXM_OF_ETH_TYPE, eth_type);
-//             ofl_structs_match_put8(match_ib, OXM_OF_IP_PROTO, IP_TYPE_TCP);    // TCP
-//             ofl_structs_match_put32(match_ib, OXM_OF_IPV4_DST, ip_ctrl);       // IP Destino (Controlador)
-//         }
-//     }
-// }
+        if (i == 2)
+        {
+            connection_port = atoi(str);
+        }
+    }
+    VLOG_WARN(LOG_MODULE, "[SECCHAN main]: Puerto final extraído %d", connection_port);
+    return connection_port;
+
+}
+
 //**FIN**//

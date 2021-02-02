@@ -1,5 +1,5 @@
 /* 
- * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP).
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
  * Copyright (c) 2020.
  * 
  * This program is free software: you can redistribute it and/or modify  
@@ -236,9 +236,12 @@ int mac_to_port_delete_port(struct mac_to_port *mac_port, int port);
 
 /*Debug function */
 //show new table
-void log_count_request_pks(const void *Mensaje);
 void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath);
 void log_uah(const void *Mensaje, int64_t id);
-/*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
+
+struct in_addr remove_local_port_UAH(struct datapath *dp);
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, uint8_t *mac, uint32_t old_local_port);
+uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name);
+/*Fin eHDDP*/
 
 #endif /* DP_PORTS_H */

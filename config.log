@@ -484,8 +484,8 @@ configure:5427: $? = 0
 configure:5434: result: yes
 configure:5453: checking for strlcpy
 configure:5453: gcc -o conftest -g -O2   conftest.c  >&5
-/tmp/ccK3PKZE.o: In function `main':
-/home/arppath/ofs13-ehddp/conftest.c:63: undefined reference to `strlcpy'
+/tmp/ccsVD9cF.o: In function `main':
+/home/arppath/eHDDP-inband/conftest.c:63: undefined reference to `strlcpy'
 collect2: error: ld returned 1 exit status
 configure:5453: $? = 1
 configure: failed program was:
@@ -798,7 +798,7 @@ ofp_cv_malloc_hooks=yes
 ## Output variables. ##
 ## ----------------- ##
 
-ACLOCAL='${SHELL} /home/arppath/ofs13-ehddp/build-aux/missing aclocal-1.15'
+ACLOCAL='${SHELL} /home/arppath/eHDDP-inband/build-aux/missing aclocal-1.15'
 AMDEPBACKSLASH='\'
 AMDEP_FALSE='#'
 AMDEP_TRUE=''
@@ -807,9 +807,9 @@ AM_BACKSLASH='\'
 AM_DEFAULT_V='$(AM_DEFAULT_VERBOSITY)'
 AM_DEFAULT_VERBOSITY='1'
 AM_V='$(V)'
-AUTOCONF='${SHELL} /home/arppath/ofs13-ehddp/build-aux/missing autoconf'
-AUTOHEADER='${SHELL} /home/arppath/ofs13-ehddp/build-aux/missing autoheader'
-AUTOMAKE='${SHELL} /home/arppath/ofs13-ehddp/build-aux/missing automake-1.15'
+AUTOCONF='${SHELL} /home/arppath/eHDDP-inband/build-aux/missing autoconf'
+AUTOHEADER='${SHELL} /home/arppath/eHDDP-inband/build-aux/missing autoheader'
+AUTOMAKE='${SHELL} /home/arppath/eHDDP-inband/build-aux/missing automake-1.15'
 AWK='mawk'
 BUILDNR='0'
 BUILD_HW_LIBS_FALSE=''
@@ -855,7 +855,7 @@ LIBOBJS=''
 LIBS='-lnbee '
 LOGDIR='${localstatedir}/log/${PACKAGE}'
 LTLIBOBJS=''
-MAKEINFO='${SHELL} /home/arppath/ofs13-ehddp/build-aux/missing makeinfo'
+MAKEINFO='${SHELL} /home/arppath/eHDDP-inband/build-aux/missing makeinfo'
 MKDIR_P='/bin/mkdir -p'
 NDEBUG_FALSE=''
 NDEBUG_TRUE='#'
@@ -913,7 +913,7 @@ host_alias=''
 htmldir='${docdir}'
 includedir='${prefix}/include'
 infodir='${datarootdir}/info'
-install_sh='${SHELL} /home/arppath/ofs13-ehddp/build-aux/install-sh'
+install_sh='${SHELL} /home/arppath/eHDDP-inband/build-aux/install-sh'
 libdir='${exec_prefix}/lib'
 libexecdir='${exec_prefix}/libexec'
 localedir='${datarootdir}/locale'

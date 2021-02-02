@@ -119,7 +119,15 @@ secchan/secchan.o: secchan/secchan.c /usr/include/stdc-predef.h config.h \
  lib/vconn.h lib/vlog-socket.h lib/vlog.h lib/vlog-modules.def \
  lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
  lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
- lib/../utilities/vlog-modules.def
+ lib/../utilities/vlog-modules.def secchan/../oflib/ofl-messages.h \
+ secchan/../oflib/../include/openflow/openflow.h secchan/../oflib/ofl.h \
+ secchan/../oflib/ofl-structs.h /usr/include/netinet/icmp6.h \
+ secchan/../oflib/ofl-actions.h secchan/../oflib/ofl-packets.h \
+ secchan/../oflib/../lib/hmap.h secchan/../oflib/../lib/util.h \
+ secchan/../oflib/oxm-match.h lib/hmap.h \
+ secchan/../oflib/../oflib/ofl-structs.h secchan/../oflib/oxm-match.def \
+ secchan/../oflib/ofl-print.h secchan/../oflib/ofl-print.h \
+ secchan/../oflib/ofl-structs.h
 
 /usr/include/stdc-predef.h:
 
@@ -460,3 +468,35 @@ lib/../secchan/vlog-modules.def:
 lib/../udatapath/vlog-modules.def:
 
 lib/../utilities/vlog-modules.def:
+
+secchan/../oflib/ofl-messages.h:
+
+secchan/../oflib/../include/openflow/openflow.h:
+
+secchan/../oflib/ofl.h:
+
+secchan/../oflib/ofl-structs.h:
+
+/usr/include/netinet/icmp6.h:
+
+secchan/../oflib/ofl-actions.h:
+
+secchan/../oflib/ofl-packets.h:
+
+secchan/../oflib/../lib/hmap.h:
+
+secchan/../oflib/../lib/util.h:
+
+secchan/../oflib/oxm-match.h:
+
+lib/hmap.h:
+
+secchan/../oflib/../oflib/ofl-structs.h:
+
+secchan/../oflib/oxm-match.def:
+
+secchan/../oflib/ofl-print.h:
+
+secchan/../oflib/ofl-print.h:
+
+secchan/../oflib/ofl-structs.h:

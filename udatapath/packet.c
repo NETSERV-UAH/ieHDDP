@@ -252,17 +252,78 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
         pkt->dp->ports[1].conf->hw_addr,sizeof(uint8_t)*ETH_ADDR_LEN); //decimos que hemos sido nosotros los ultimos en modificar
     memcpy(&pkt->handle_std->proto->ehddp->nxt_mac, nxt_mac,sizeof(uint8_t)*ETH_ADDR_LEN); 
 
-    /*pkt->handle_std->proto->ehddp->configurations[num_elements-1]=configuration;
-    pkt->handle_std->proto->ehddp->type_devices[num_elements-1]=htons(type_device);
-    pkt->handle_std->proto->ehddp->ids[num_elements-1]=mac2int(pkt->dp->ports[1].conf->hw_addr);
-    pkt->handle_std->proto->ehddp->in_ports[num_elements-1]=pkt->in_port;
-    pkt->handle_std->proto->ehddp->out_ports[num_elements-1]=out_port;*/
-
     pkt->packet_out=false;
     pkt->handle_std->valid = false;
 
     packet_handle_std_validate(pkt->handle_std);
     return 0;
+}
+
+struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port)
+{
+    struct packet *pkt = NULL;
+    struct ofpbuf *buf = NULL;
+    uint8_t char_size;
+    struct in_addr local_ip = *ip;
+    uint8_t MAC_BC[ETH_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    uint16_t type_array = bigtolittle16(ETH_TYPE_EHDDP); /*eHDDP type*/
+    
+    //Creamos el buffer del paquete
+    buf = ofpbuf_new(LEN_EHDDP_PORT_PKT); //(sizeof(struct Amaru_header)+sizeof(struct eth_header)); //sizeof(struct eth_header));
+    //lo rellenamos con la broadcast
+    ofpbuf_put(buf, MAC_BC, ETH_ADDR_LEN);
+    //lo rellenamos con la mac broadcast //Puro trámite
+    ofpbuf_put(buf, MAC_BC, ETH_ADDR_LEN);
+    //le metemos el eth Type
+    ofpbuf_put(buf, &type_array, sizeof(uint16_t));
+
+    //El paquete contendrá el número del nuevo puerto, el tamaño del nombre del puerto y el nombre.
+    //introducimos el nivel
+    ofpbuf_put(buf, &new_local_port, sizeof(uint32_t));
+    //Introducimos el tamaño del nombre de la interfaz
+    char_size = strlen(port_name);
+    ofpbuf_put(buf, &char_size, sizeof(char_size));
+    //introducimos el nombre de la interfaz
+    ofpbuf_put(buf, port_name, strlen(port_name));
+    /*Introducimos la ip del puerto local*/
+    ofpbuf_put(buf, &local_ip.s_addr, INET_ADDRSTRLEN);
+    /*Introducimos la MAC del puerto local*/
+    ofpbuf_put(buf, mac, ETH_ADDR_LEN);
+    /*Introducimos el numero del antiguo puerto local*/
+    ofpbuf_put(buf, old_local_port, sizeof(uint32_t));
+
+    //Creamos el buffer del paquete
+    pkt = packet_create(dp, new_local_port, buf, false);
+
+    return pkt;
+}
+
+void send_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port)
+{
+    struct ofl_msg_packet_in msg;
+    struct packet *pkt;
+
+    pkt = create_ehddp_new_localport_packet_UAH(dp, new_local_port, port_name, ip, mac, old_local_port);
+
+    // VLOG_WARN(LOG_MODULE, "Función DP ACTION OUTPUT PORT case OFPP_CONTROLLER.");
+    msg.header.type = OFPT_PACKET_IN;
+    msg.total_len = pkt->buffer->size;
+    msg.reason = OFPR_ACTION;
+    msg.table_id = pkt->table_id;
+    msg.data = pkt->buffer->data;
+    msg.cookie = 0xffffffffffffffff;
+    msg.buffer_id = OFP_NO_BUFFER;
+    msg.data_length = pkt->buffer->size;
+
+    if (!pkt->handle_std->valid)
+    {
+        packet_handle_std_validate(pkt->handle_std);
+    }
+    /* In this implementation the fields in_port and in_phy_port
+        always will be the same, because we are not considering logical
+        ports*/
+    msg.match = (struct ofl_match_header *)&pkt->handle_std->match;
+    dp_send_message(pkt->dp, (struct ofl_msg_header *)&msg, NULL);
 }
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/

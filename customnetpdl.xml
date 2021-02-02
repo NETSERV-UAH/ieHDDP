@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <!--/* 
  * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP).
  * Copyright (c) 2020.
@@ -15,7 +16,6 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
  -->
-<?xml version="1.0" encoding="utf-8"?>
 <netpdl name="nbee.org NetPDL Database" version="0.9" creator="nbee.org" date="09-04-2007">
 <protocol name="startproto" longname="Starting Protocol (used for beginning the parsing)" showsumtemplate="startproto">
 		<execute-code>

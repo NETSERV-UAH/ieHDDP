@@ -1,5 +1,5 @@
 /* 
- * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP).
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
  * Copyright (c) 2020.
  * 
  * This program is free software: you can redistribute it and/or modify  
@@ -707,9 +707,6 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt){
     int table_port = 0; //varible auxiliar para puertp
     int response_reply = 1; //variable para responder o no con reply
     int num_ports = 0; //numero de puertos disponibles (son todos menos los utilizados por los sensores y caidos)
-
-    /*Contamos numero de paquetes request*/
-    log_count_request_pks("Request Detectado\n");
 
     VLOG_INFO(LOG_MODULE, "Calculamos el puerto de entrada y el numero de puertos disponible");
     num_ports = num_port_available(pkt->dp);

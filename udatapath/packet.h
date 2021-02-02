@@ -82,6 +82,10 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 
 //funcion para actualizar los paquetes
 uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_mac);
+struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
+    char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port);
+void send_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
+    char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port);
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #endif /* PACKET_H */

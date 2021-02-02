@@ -1,5 +1,5 @@
 /* 
- * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP).
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
  * Copyright (c) 2020.
  * 
  * This program is free software: you can redistribute it and/or modify  
@@ -103,11 +103,11 @@ udatapath_cmd(int argc, char *argv[])
     int n_listeners;
     int error;
     int i;
-    /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-    uint64_t deletetimeBT = 0;
+    /*Modificacion UAH eHDDP, JAH-*/
+    uint64_t deletetimeBT = 0, time_init_uah = 0;
     /** Cambiamos de modo 0 (sin conexiones entre sensores) o modo 1 (con conexion entre sensores) */
     SENSOR_TO_SENSOR = 1 ; 
-    /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
+    /*Fin Modificacion eHDDP, JAH-*/
 
     set_program_name(argv[0]);
     register_fault_handlers();
@@ -181,8 +181,16 @@ udatapath_cmd(int argc, char *argv[])
         VLOG_INFO(THIS_MODULE,"Somos un sensor con ID: %lu", dp->id);
         type_sensor = (int)(rand() % NUMERO_TIPO_SENSORES)+3;   
     }
-    /*Fin Modificacion UAH eHDDP, JAH-*/
+    
 
+    if (get_dp_local_port_number_UAH(dp)) 
+    {
+        //iniciamos el temporaizados
+        time_init_uah = time_msec();
+        VLOG_INFO(THIS_MODULE, "time_init_uah:%ld\n", (long)time_init_uah);
+    }
+    
+    /*Fin Modificacion UAH eHDDP, JAH-*/
     for (;;) {
         dp_run(dp);
         dp_wait(dp);

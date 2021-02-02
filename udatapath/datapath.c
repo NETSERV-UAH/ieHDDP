@@ -663,3 +663,20 @@ dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
     }
     return 0;
 }
+
+/*Modificacion UAH*/
+uint32_t get_dp_local_port_number_UAH(struct datapath *dp)
+{
+    struct sw_port *p;
+    if (dp->local_port != NULL)
+    {
+        LIST_FOR_EACH(p, struct sw_port, node, &dp->port_list)
+        {
+            if (!strcmp(p->conf->name, dp->local_port->conf->name) && p->conf->port_no != OFPP_LOCAL)
+            {
+                return p->conf->port_no;
+            }
+        }
+    }
+    return 0;
+}

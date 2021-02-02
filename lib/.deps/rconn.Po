@@ -82,7 +82,8 @@ lib/rconn.o: lib/rconn.c /usr/include/stdc-predef.h config.h lib/rconn.h \
  lib/type-props.h lib/vconn.h lib/vconn-provider.h lib/ofpstat.h \
  lib/vlog.h lib/vlog-modules.def lib/../oflib/vlog-modules.def \
  lib/../oflib-exp/vlog-modules.def lib/../secchan/vlog-modules.def \
- lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def
+ lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def \
+ lib/vconn-stream.h
 
 /usr/include/stdc-predef.h:
 
@@ -313,3 +314,5 @@ lib/../secchan/vlog-modules.def:
 lib/../udatapath/vlog-modules.def:
 
 lib/../utilities/vlog-modules.def:
+
+lib/vconn-stream.h:

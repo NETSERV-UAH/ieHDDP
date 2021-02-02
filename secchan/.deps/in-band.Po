@@ -1,13 +1,18 @@
 secchan/in-band.o: secchan/in-band.c /usr/include/stdc-predef.h config.h \
- secchan/in-band.h /usr/include/arpa/inet.h /usr/include/features.h \
- /usr/include/x86_64-linux-gnu/sys/cdefs.h \
+ secchan/in-band.h /usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h \
+ /usr/include/stdint.h \
+ /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
+ /usr/include/features.h /usr/include/x86_64-linux-gnu/sys/cdefs.h \
  /usr/include/x86_64-linux-gnu/bits/wordsize.h \
  /usr/include/x86_64-linux-gnu/bits/long-double.h \
  /usr/include/x86_64-linux-gnu/gnu/stubs.h \
- /usr/include/x86_64-linux-gnu/gnu/stubs-64.h /usr/include/netinet/in.h \
- /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+ /usr/include/x86_64-linux-gnu/gnu/stubs-64.h \
  /usr/include/x86_64-linux-gnu/bits/types.h \
  /usr/include/x86_64-linux-gnu/bits/typesizes.h \
+ /usr/include/x86_64-linux-gnu/bits/wchar.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-intn.h \
+ /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h \
+ /usr/include/arpa/inet.h /usr/include/netinet/in.h \
  /usr/include/x86_64-linux-gnu/sys/socket.h \
  /usr/include/x86_64-linux-gnu/bits/types/struct_iovec.h \
  /usr/lib/gcc/x86_64-linux-gnu/7/include/stddef.h \
@@ -16,8 +21,7 @@ secchan/in-band.o: secchan/in-band.c /usr/include/stdc-predef.h config.h \
  /usr/include/x86_64-linux-gnu/bits/types/clock_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/clockid_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/time_t.h \
- /usr/include/x86_64-linux-gnu/bits/types/timer_t.h \
- /usr/include/x86_64-linux-gnu/bits/stdint-intn.h /usr/include/endian.h \
+ /usr/include/x86_64-linux-gnu/bits/types/timer_t.h /usr/include/endian.h \
  /usr/include/x86_64-linux-gnu/bits/endian.h \
  /usr/include/x86_64-linux-gnu/bits/byteswap.h \
  /usr/include/x86_64-linux-gnu/bits/byteswap-16.h \
@@ -46,10 +50,7 @@ secchan/in-band.o: secchan/in-band.c /usr/include/stdc-predef.h config.h \
  /usr/include/x86_64-linux-gnu/bits/errno.h /usr/include/linux/errno.h \
  /usr/include/x86_64-linux-gnu/asm/errno.h \
  /usr/include/asm-generic/errno.h /usr/include/asm-generic/errno-base.h \
- /usr/include/inttypes.h /usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h \
- /usr/include/stdint.h \
- /usr/include/x86_64-linux-gnu/bits/libc-header-start.h \
- /usr/include/x86_64-linux-gnu/bits/wchar.h /usr/include/string.h \
+ /usr/include/inttypes.h /usr/include/string.h \
  /usr/include/x86_64-linux-gnu/bits/types/locale_t.h \
  /usr/include/x86_64-linux-gnu/bits/types/__locale_t.h \
  /usr/include/strings.h \
@@ -87,7 +88,20 @@ secchan/in-band.o: secchan/in-band.c /usr/include/stdc-predef.h config.h \
  /usr/include/x86_64-linux-gnu/bits/uio_lim.h lib/vlog.h \
  lib/vlog-modules.def lib/../oflib/vlog-modules.def \
  lib/../oflib-exp/vlog-modules.def lib/../secchan/vlog-modules.def \
- lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def
+ lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def \
+ secchan/../oflib/ofl-messages.h \
+ secchan/../oflib/../include/openflow/openflow.h secchan/../oflib/ofl.h \
+ secchan/../oflib/ofl-structs.h /usr/include/netinet/icmp6.h \
+ secchan/../oflib/ofl-actions.h secchan/../oflib/ofl-packets.h \
+ secchan/../oflib/../lib/hmap.h /usr/include/stdlib.h \
+ /usr/include/x86_64-linux-gnu/bits/waitflags.h \
+ /usr/include/x86_64-linux-gnu/bits/waitstatus.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn.h \
+ /usr/include/x86_64-linux-gnu/bits/floatn-common.h /usr/include/alloca.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib-float.h \
+ /usr/include/x86_64-linux-gnu/bits/stdlib.h \
+ secchan/../oflib/../lib/util.h lib/vconn-stream.h
 
 /usr/include/stdc-predef.h:
 
@@ -95,7 +109,11 @@ config.h:
 
 secchan/in-band.h:
 
-/usr/include/arpa/inet.h:
+/usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h:
+
+/usr/include/stdint.h:
+
+/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
 
 /usr/include/features.h:
 
@@ -109,13 +127,19 @@ secchan/in-band.h:
 
 /usr/include/x86_64-linux-gnu/gnu/stubs-64.h:
 
-/usr/include/netinet/in.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
-
 /usr/include/x86_64-linux-gnu/bits/types.h:
 
 /usr/include/x86_64-linux-gnu/bits/typesizes.h:
+
+/usr/include/x86_64-linux-gnu/bits/wchar.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdint-uintn.h:
+
+/usr/include/arpa/inet.h:
+
+/usr/include/netinet/in.h:
 
 /usr/include/x86_64-linux-gnu/sys/socket.h:
 
@@ -134,8 +158,6 @@ secchan/in-band.h:
 /usr/include/x86_64-linux-gnu/bits/types/time_t.h:
 
 /usr/include/x86_64-linux-gnu/bits/types/timer_t.h:
-
-/usr/include/x86_64-linux-gnu/bits/stdint-intn.h:
 
 /usr/include/endian.h:
 
@@ -202,14 +224,6 @@ secchan/in-band.h:
 /usr/include/asm-generic/errno-base.h:
 
 /usr/include/inttypes.h:
-
-/usr/lib/gcc/x86_64-linux-gnu/7/include/stdint.h:
-
-/usr/include/stdint.h:
-
-/usr/include/x86_64-linux-gnu/bits/libc-header-start.h:
-
-/usr/include/x86_64-linux-gnu/bits/wchar.h:
 
 /usr/include/string.h:
 
@@ -342,3 +356,41 @@ lib/../secchan/vlog-modules.def:
 lib/../udatapath/vlog-modules.def:
 
 lib/../utilities/vlog-modules.def:
+
+secchan/../oflib/ofl-messages.h:
+
+secchan/../oflib/../include/openflow/openflow.h:
+
+secchan/../oflib/ofl.h:
+
+secchan/../oflib/ofl-structs.h:
+
+/usr/include/netinet/icmp6.h:
+
+secchan/../oflib/ofl-actions.h:
+
+secchan/../oflib/ofl-packets.h:
+
+secchan/../oflib/../lib/hmap.h:
+
+/usr/include/stdlib.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitflags.h:
+
+/usr/include/x86_64-linux-gnu/bits/waitstatus.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn.h:
+
+/usr/include/x86_64-linux-gnu/bits/floatn-common.h:
+
+/usr/include/alloca.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-bsearch.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib-float.h:
+
+/usr/include/x86_64-linux-gnu/bits/stdlib.h:
+
+secchan/../oflib/../lib/util.h:
+
+lib/vconn-stream.h:

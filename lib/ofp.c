@@ -1,34 +1,18 @@
-/* Copyright (c) 2008, 2009 The Board of Trustees of The Leland Stanford
- * Junior University
+/* 
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
+ * Copyright (c) 2020.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
  *
- * We are making the OpenFlow specification and associated documentation
- * (Software) available for public use and benefit with the expectation
- * that others will use, modify and enhance the Software and contribute
- * those enhancements back to the community. However, since we would
- * like to make the Software available for broadest use, with as few
- * restrictions as possible permission is hereby granted, free of
- * charge, to any person obtaining a copy of this Software to deal in
- * the Software under the copyrights without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- * The name and trademarks of copyright holder(s) may NOT be used in
- * advertising or publicity pertaining to the Software or any
- * derivatives without specific, written prior permission.
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 /* Zoltan:
@@ -83,9 +67,6 @@
 
 //++Modificaciones UAH++//
 static void create_ofl_match_UAH(struct flow *flow, struct ofl_match *match);
-// static void print_ofp_match_UAH(FILE *stream, struct ofp_match *ofpm, uint8_t *p_oxms, size_t *len);
-// static void check_ofp_instructions_UAH(FILE *stream, struct ofp_instruction *ofpia, size_t data_len, size_t *num_in);
-
 //++++++//
 
 /* XXX we should really use consecutive xids to avoid probabilistic
@@ -240,7 +221,7 @@ struct ofpbuf *
 make_add_flow(const struct flow *flow, uint32_t buffer_id, uint8_t table_id,
               uint16_t idle_timeout, size_t actions_len, uint16_t priority)
 {
-    //**Modificaciones Boby UAH**//
+    //**Modificaciones UAH**//
     struct ofp_flow_mod *ofm;
     struct ofpbuf *out;
     //++++++//
@@ -274,7 +255,7 @@ make_add_flow(const struct flow *flow, uint32_t buffer_id, uint8_t table_id,
 struct ofpbuf *
 make_del_flow(const struct flow *flow, uint8_t table_id)
 {
-    /*Modificaciones Boby UAH*/
+    /*Modificaciones UAH*/
     struct ofpbuf *out = make_flow_mod(OFPFC_DELETE, table_id, flow, 0); /*Modificacion Boby UAH*/
     struct ofl_msg_header *ofl_oh;
     /*+++FIN+++*/
@@ -282,17 +263,13 @@ make_del_flow(const struct flow *flow, uint8_t table_id)
     struct ofp_flow_mod *ofm = out->data;
     ofm->out_port = htonl(OFPP_ANY);
 
-    /*Modificaciones Boby UAH*/
-    if (!ofl_msg_unpack(out->data, out->size, &ofl_oh, NULL /*xid*/, NULL))
-    {
-        return out;
-    }
-    else
-    {
+    /*Modificaciones UAH*/
+    if (ofl_msg_unpack(out->data, out->size, &ofl_oh, NULL /*xid*/, NULL)){
         return NULL;
     }
+   
     /*+++FIN+++*/
-    // return out;
+    return out;
 }
 
 struct ofpbuf *
@@ -301,11 +278,10 @@ make_add_simple_flow(const struct flow *flow,
                      uint16_t idle_timeout, uint16_t priority)
 {
     struct ofpbuf *buffer;
-    /*Modificaciones Boby UAH*/
+    /*Modificaciones UAH*/
     struct ofl_msg_header *ofl_oh;
-    
-
     /*+++FIN+++*/
+
     if (out_port != 0)
     {
         struct ofp_action_output *oao;
@@ -314,7 +290,7 @@ make_add_simple_flow(const struct flow *flow,
         oao->type = htons(OFPAT_OUTPUT);
         oao->len = htons(sizeof *oao);
         oao->port = htonl(out_port);
-        /*Modificaciones Boby UAH*/
+        /*Modificaciones UAH*/
         oao->max_len = OFPCML_NO_BUFFER; //Para que envíe el paquete completo en el packet_in
         VLOG_WARN(LOG_MODULE, "[MAKE ADD SIMPLE FLOW]: FLOW MOD NORMAL!");
         /*+++FIN+++*/
@@ -327,17 +303,13 @@ make_add_simple_flow(const struct flow *flow,
         VLOG_WARN(LOG_MODULE, "[MAKE ADD SIMPLE FLOW]: FLOW MOD DROP!");
     }
 
-    /*Modificaciones Boby UAH*/   
+    /*Modificaciones UAH*/   
     
-    if (!ofl_msg_unpack(buffer->data, buffer->size, &ofl_oh, NULL /*xid*/, NULL))
-    {
-        return buffer;
-    }
-    else
-    {
+    if (ofl_msg_unpack(buffer->data, buffer->size, &ofl_oh, NULL /*xid*/, NULL)){
         return NULL;
     }
     /*+++FIN+++*/
+    return buffer;
 }
 
 struct ofpbuf *
@@ -364,7 +336,6 @@ make_packet_out(const struct ofpbuf *packet, uint32_t buffer_id,
 {
     //Modificaciones UAH//
     size_t actions_len = n_actions * ntohs(actions->len);
-    // size_t actions_len = n_actions * sizeof *actions;
     //****//
 
     struct ofp_packet_out *opo;
@@ -394,7 +365,7 @@ make_unbuffered_packet_out(const struct ofpbuf *packet,
     action.type = htons(OFPAT_OUTPUT);
     action.len = htons(sizeof action);
     action.port = htonl(out_port);
-    // VLOG_WARN(LOG_MODULE,"Out port= %u",ntohl(action.port));
+    
     return make_packet_out(packet, UINT32_MAX, in_port,
                            (struct ofp_action_header *)&action, 1);
 }
@@ -894,7 +865,7 @@ actions_next(struct actions_iterator *iter)
         return NULL;
     }
 }
-//Modificaciones Boby UAH//
+//Modificaciones UAH//
 /*Función creada para generar la estructura ofl_match a partir 
   de una estructura flow.
 */
@@ -915,16 +886,11 @@ static void create_ofl_match_UAH(struct flow *flow, struct ofl_match *match)
             ofl_structs_match_put32(match, OXM_OF_IN_PORT, ntohl(flow->in_port));
         }
         if (flow->nw_dst)
-        // if(flow->dl_dst)
         {
             ip4_aux = flow->nw_dst;
             inet_ntop(AF_INET, &ip4_aux, ip4, INET_ADDRSTRLEN);
             VLOG_WARN(LOG_MODULE, "[CREATE OFL MATCH UAH]: ARP destino: %u==%s", flow->nw_dst, ip4);
-            // ofl_structs_match_put16(match, OXM_OF_ARP_OP, flow->nw_proto); // ARP_REQ(1) o ARP_REPLY(2)
             ofl_structs_match_put32(match, OXM_OF_ARP_TPA, flow->nw_dst); //IP Target
-
-            // ofl_structs_match_put_eth(match, OXM_OF_ETH_DST, (uint8_t *)value);
-            // ofl_structs_match_put32(match, OXM_OF_ARP_SPA, flow->nw_src); //IP Source
         }
         if (flow->dl_dst && !eth_addr_is_zero(flow->dl_dst))
         {
@@ -946,6 +912,10 @@ static void create_ofl_match_UAH(struct flow *flow, struct ofl_match *match)
         if (flow->nw_src)
         {
             ofl_structs_match_put32(match, OXM_OF_IPV4_SRC, flow->nw_src); // IP Origen (Controlador)
+        }
+        if (flow->tp_dst)
+        {
+            ofl_structs_match_put16(match, OXM_OF_TCP_DST, ntohs(flow->tp_dst)); // Puerto de la conexión OpenFlow
         }
     } /*Provisional para usar el controlador RYU*/
     else if (flow->dl_type == 0)
@@ -970,15 +940,13 @@ struct ofpbuf *
 modify_local_port_in_band_rules_UAH(const struct flow *flow, uint32_t buffer_id, uint8_t table_id,
                                     uint16_t priority, uint32_t new_local_port)
 {
-    //**Modificaciones Boby UAH**//
+    //**Modificaciones UAH**//
     struct ofp_flow_mod *ofm;
     struct ofpbuf *buffer;
 
     struct ofp_instruction_actions *oia;
     struct ofp_action_output *oao;
     struct ofl_msg_header *ofl_oh;
-    // uint32_t ip4_src_aux, ip4_dst_aux;
-    // char ip4_src[INET_ADDRSTRLEN], ip4_dst[INET_ADDRSTRLEN];
 
     size_t instruction_len = sizeof(struct ofp_instruction_actions) + sizeof(struct ofp_action_output);
 
@@ -997,65 +965,14 @@ modify_local_port_in_band_rules_UAH(const struct flow *flow, uint32_t buffer_id,
     oao = ofpbuf_put_zeros(buffer, sizeof *oao);
     oao->type = htons(OFPAT_OUTPUT);
     oao->len = htons(sizeof(struct ofp_action_output));
-    // oao->len = htons(sizeof *oao);
+    
     oao->port = htonl(new_local_port);
     oao->max_len = OFPCML_NO_BUFFER; //Para que envíe el paquete completo en el packet_in
     VLOG_WARN(LOG_MODULE, "[MODIFY LOCAL PORT IN BAND RULES]: Se crea un FLOW MOD para modificar las reglas de in-band");
 
-    if (!ofl_msg_unpack(buffer->data, buffer->size, &ofl_oh, NULL /*xid*/, NULL))
-    {
-        return buffer;
-    }
-    else
+    if (ofl_msg_unpack(buffer->data, buffer->size, &ofl_oh, NULL /*xid*/, NULL))
     {
         return NULL;
     }
-    // return buffer;
+    return buffer;
 }
-// static void print_ofp_match_UAH(FILE *stream, struct ofp_match *ofpm, uint8_t *p_oxms, size_t* len)
-// {
-//     struct ofl_match *ofl_match=(struct ofl_match*)malloc(sizeof(struct ofl_match));
-//     ofl_err error;
-//     ofl_structs_match_init(ofl_match);
-//     error=ofl_structs_match_unpack(ofpm, p_oxms, len,(struct ofl_match_header**)&ofl_match, NULL);
-//     if(!error)
-//     {
-//         fprintf(stream, "\n\n##-PRINT OF MATCH UAH-##\n");
-//         ofl_structs_match_print(stream, (struct ofl_match_header *)ofl_match, NULL);
-//         fprintf(stream, "\n");
-//     }else{
-//         VLOG_WARN(LOG_MODULE, "[PRINT OFP MATCH UAH]: ¡NO SE HA PODIDO DESEMPAQUETAR EL MATCH!");
-//     }
-
-//     ofl_structs_free_match((struct ofl_match_header *)ofl_match, NULL);
-
-//     // free(ofl_match);
-// }
-// static void check_ofp_instructions_UAH(FILE *stream, struct ofp_instruction *ofpia, size_t data_len, size_t *num_in)
-// {
-//     ofl_err error;
-//     int i;
-//     // struct ofl_instruction *ofli_act = (struct ofl_instruction *)malloc(sizeof(struct ofl_instruction_actions));
-//     struct ofl_instruction_header **ofli_header;
-//     error = ofl_utils_count_ofp_instructions(ofpia, data_len, num_in);
-//     if (!error)
-//     {
-//         fprintf(stream, "\n\n##-CHECK OFP INSTRUCTIONS UAH-##\n");
-//         ofli_header = (struct ofl_instruction_header **)malloc((*num_in) * sizeof(struct ofl_instruction_header *));
-//         error = ofl_structs_instructions_unpack((struct ofp_instruction *)ofpia, &data_len, ofli_header, NULL);
-//         if (!error)
-//         {
-//             for (i = 0; i < *num_in; i++)
-//             {
-//                 ofl_structs_instruction_print(stream, ofli_header[i], NULL);
-//             }
-//         }
-//         free(ofli_header);
-//     }
-//     else
-//     {
-//         VLOG_WARN(LOG_MODULE, "[CHECK OFP INSTRUCTIONS UAH]: ERROR EN LA COMPROBACIÓN DE LAS INSTRUCCIONES");
-//         return;
-//     }
-// }
-//++++++//

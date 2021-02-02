@@ -403,7 +403,7 @@ BUILD_ASSERT_DECL(MPLS_HEADER_LEN == sizeof(struct mpls_header));
 
 /*Modificacion UAH*/
 #define LEN_BASIC_PKT 17 // Para alcanzar 60 bytes, el tamaño mínimo de un paquete sin el checksum. (Ethernet(14) + Amaru(29) + Padding(17) = 60 )
-#define LEN_AMARU_PORT_PKT 47 //  (Ethernet(14) + Nuevo puerto(4) + Tamaño nombre(1) + Nombre puerto(8) + IP (16) + Antiguo puerto(4) = 47 )
+#define LEN_EHDDP_PORT_PKT 47 //  (Ethernet(14) + Nuevo puerto(4) + Tamaño nombre(1) + Nombre puerto(8) + IP (16) + Antiguo puerto(4) = 47 )
 /*Fin modificacion UAH*/
 
 struct ehddp_header{

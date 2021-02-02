@@ -68,9 +68,8 @@ static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(10, 25);
 
 static void stream_clear_txbuf(struct stream_vconn *);
 
-int
-new_stream_vconn(const char *name, int fd, int connect_status,
-                 uint32_t ip, bool reconnectable, struct vconn **vconnp)
+int new_stream_vconn(const char *name, int fd, int connect_status,
+                     uint32_t ip, bool reconnectable, struct vconn **vconnp)
 {
     struct stream_vconn *s;
 
@@ -118,24 +117,30 @@ stream_recv(struct vconn *vconn, struct ofpbuf **bufferp)
     size_t want_bytes;
     ssize_t retval;
 
-    if (s->rxbuf == NULL) {
+    if (s->rxbuf == NULL)
+    {
         s->rxbuf = ofpbuf_new(1564);
     }
     rx = s->rxbuf;
 
 again:
-    if (sizeof(struct ofp_header) > rx->size) {
+    if (sizeof(struct ofp_header) > rx->size)
+    {
         want_bytes = sizeof(struct ofp_header) - rx->size;
-    } else {
+    }
+    else
+    {
         struct ofp_header *oh = rx->data;
         size_t length = ntohs(oh->length);
-        if (length < sizeof(struct ofp_header)) {
+        if (length < sizeof(struct ofp_header))
+        {
             VLOG_ERR_RL(LOG_MODULE, &rl, "received too-short ofp_header (%zu bytes)",
                         length);
             return EPROTO;
         }
         want_bytes = length - rx->size;
-        if (!want_bytes) {
+        if (!want_bytes)
+        {
             *bufferp = rx;
             s->rxbuf = NULL;
             return 0;
@@ -144,26 +149,38 @@ again:
     ofpbuf_prealloc_tailroom(rx, want_bytes);
 
     retval = read(s->fd, ofpbuf_tail(rx), want_bytes);
-    if (retval > 0) {
+    if (retval > 0)
+    {
         rx->size += retval;
-        if (retval == want_bytes) {
-            if (rx->size > sizeof(struct ofp_header)) {
+        if (retval == want_bytes)
+        {
+            if (rx->size > sizeof(struct ofp_header))
+            {
                 *bufferp = rx;
                 s->rxbuf = NULL;
                 return 0;
-            } else {
+            }
+            else
+            {
                 goto again;
             }
         }
         return EAGAIN;
-    } else if (retval == 0) {
-        if (rx->size) {
+    }
+    else if (retval == 0)
+    {
+        if (rx->size)
+        {
             VLOG_ERR_RL(LOG_MODULE, &rl, "connection dropped mid-packet");
             return EPROTO;
-        } else {
+        }
+        else
+        {
             return EOF;
         }
-    } else {
+    }
+    else
+    {
         return errno;
     }
 }
@@ -182,15 +199,20 @@ stream_do_tx(int fd UNUSED, short int revents UNUSED, void *vconn_)
     struct vconn *vconn = vconn_;
     struct stream_vconn *s = stream_vconn_cast(vconn);
     ssize_t n = write(s->fd, s->txbuf->data, s->txbuf->size);
-    if (n < 0) {
-        if (errno != EAGAIN) {
+    if (n < 0)
+    {
+        if (errno != EAGAIN)
+        {
             VLOG_ERR_RL(LOG_MODULE, &rl, "send: %s", strerror(errno));
             stream_clear_txbuf(s);
             return;
         }
-    } else if (n > 0) {
+    }
+    else if (n > 0)
+    {
         ofpbuf_pull(s->txbuf, n);
-        if (!s->txbuf->size) {
+        if (!s->txbuf->size)
+        {
             stream_clear_txbuf(s);
             return;
         }
@@ -204,22 +226,29 @@ stream_send(struct vconn *vconn, struct ofpbuf *buffer)
     struct stream_vconn *s = stream_vconn_cast(vconn);
     ssize_t retval;
 
-    if (s->txbuf) {
+    if (s->txbuf)
+    {
         return EAGAIN;
     }
 
     retval = write(s->fd, buffer->data, buffer->size);
-    if (retval == buffer->size) {
+    if (retval == buffer->size)
+    {
         ofpbuf_delete(buffer);
         return 0;
-    } else if (retval >= 0 || errno == EAGAIN) {
+    }
+    else if (retval >= 0 || errno == EAGAIN)
+    {
         s->txbuf = buffer;
-        if (retval > 0) {
+        if (retval > 0)
+        {
             ofpbuf_pull(buffer, retval);
         }
         s->tx_waiter = poll_fd_callback(s->fd, POLLOUT, stream_do_tx, vconn);
         return 0;
-    } else {
+    }
+    else
+    {
         return errno;
     }
 }
@@ -228,15 +257,19 @@ static void
 stream_wait(struct vconn *vconn, enum vconn_wait_type wait)
 {
     struct stream_vconn *s = stream_vconn_cast(vconn);
-    switch (wait) {
+    switch (wait)
+    {
     case WAIT_CONNECT:
         poll_fd_wait(s->fd, POLLOUT);
         break;
 
     case WAIT_SEND:
-        if (!s->txbuf) {
+        if (!s->txbuf)
+        {
             poll_fd_wait(s->fd, POLLOUT);
-        } else {
+        }
+        else
+        {
             /* Nothing to do: need to drain txbuf first. */
         }
         break;
@@ -251,15 +284,15 @@ stream_wait(struct vconn *vconn, enum vconn_wait_type wait)
 }
 
 static struct vconn_class stream_vconn_class = {
-    "stream",                   /* name */
-    NULL,                       /* open */
-    stream_close,               /* close */
-    stream_connect,             /* connect */
-    stream_recv,                /* recv */
-    stream_send,                /* send */
-    stream_wait,                /* wait */
+    "stream",       /* name */
+    NULL,           /* open */
+    stream_close,   /* close */
+    stream_connect, /* connect */
+    stream_recv,    /* recv */
+    stream_send,    /* send */
+    stream_wait,    /* wait */
 };
-
+
 /* Passive stream socket vconn. */
 
 struct pstream_pvconn
@@ -279,22 +312,23 @@ pstream_pvconn_cast(struct pvconn *pvconn)
     return CONTAINER_OF(pvconn, struct pstream_pvconn, pvconn);
 }
 
-int
-new_pstream_pvconn(const char *name, int fd,
-                  int (*accept_cb)(int fd, const struct sockaddr *,
-                                   size_t sa_len, struct vconn **),
-                  struct pvconn **pvconnp)
+int new_pstream_pvconn(const char *name, int fd,
+                       int (*accept_cb)(int fd, const struct sockaddr *,
+                                        size_t sa_len, struct vconn **),
+                       struct pvconn **pvconnp)
 {
     struct pstream_pvconn *ps;
     int retval;
 
     retval = set_nonblocking(fd);
-    if (retval) {
+    if (retval)
+    {
         close(fd);
         return retval;
     }
 
-    if (listen(fd, 10) < 0) {
+    if (listen(fd, 10) < 0)
+    {
         int error = errno;
         VLOG_ERR(LOG_MODULE, "%s: listen: %s", name, strerror(error));
         close(fd);
@@ -326,22 +360,25 @@ pstream_accept(struct pvconn *pvconn, struct vconn **new_vconnp)
     int new_fd;
     int retval;
 
-    new_fd = accept(ps->fd, (struct sockaddr *) &ss, &ss_len);
-    if (new_fd < 0) {
+    new_fd = accept(ps->fd, (struct sockaddr *)&ss, &ss_len);
+    if (new_fd < 0)
+    {
         int retval = errno;
-        if (retval != EAGAIN) {
+        if (retval != EAGAIN)
+        {
             VLOG_DBG_RL(LOG_MODULE, &rl, "accept: %s", strerror(retval));
         }
         return retval;
     }
 
     retval = set_nonblocking(new_fd);
-    if (retval) {
+    if (retval)
+    {
         close(new_fd);
         return retval;
     }
 
-    return ps->accept_cb(new_fd, (const struct sockaddr *) &ss, ss_len,
+    return ps->accept_cb(new_fd, (const struct sockaddr *)&ss, ss_len,
                          new_vconnp);
 }
 
@@ -357,5 +394,4 @@ static struct pvconn_class pstream_pvconn_class = {
     NULL,
     pstream_close,
     pstream_accept,
-    pstream_wait
-};
+    pstream_wait};

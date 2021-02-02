@@ -200,4 +200,8 @@ dp_handle_role_request(struct datapath *dp, struct ofl_msg_role_request *msg,
 ofl_err
 dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
                                             const struct sender *sender);
+
+/*Modificacion UAH*/
+uint32_t get_dp_local_port_number_UAH(struct datapath *dp);
+
 #endif /* datapath.h */

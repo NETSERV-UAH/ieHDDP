@@ -1,34 +1,18 @@
-/* Copyright (c) 2008 The Board of Trustees of The Leland Stanford
- * Junior University
+/* 
+ * This file is part of the HDDP Switch distribution (https://github.com/gistnetserv-uah/eHDDP-inband).
+ * Copyright (c) 2020.
+ * 
+ * This program is free software: you can redistribute it and/or modify  
+ * it under the terms of the GNU General Public License as published by  
+ * the Free Software Foundation, version 3.
  *
- * We are making the OpenFlow specification and associated documentation
- * (Software) available for public use and benefit with the expectation
- * that others will use, modify and enhance the Software and contribute
- * those enhancements back to the community. However, since we would
- * like to make the Software available for broadest use, with as few
- * restrictions as possible permission is hereby granted, free of
- * charge, to any person obtaining a copy of this Software to deal in
- * the Software under the copyrights without restriction, including
- * without limitation the rights to use, copy, modify, merge, publish,
- * distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so, subject to
- * the following conditions:
+ * This program is distributed in the hope that it will be useful, but 
+ * WITHOUT ANY WARRANTY; without even the implied warranty of 
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU 
+ * General Public License for more details.
  *
- * The above copyright notice and this permission notice shall be
- * included in all copies or substantial portions of the Software.
- *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
- * MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
- * NONINFRINGEMENT.  IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS
- * BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
- * ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
- * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- * SOFTWARE.
- *
- * The name and trademarks of copyright holder(s) may NOT be used in
- * advertising or publicity pertaining to the Software or any
- * derivatives without specific, written prior permission.
+ * You should have received a copy of the GNU General Public License 
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <config.h>
@@ -51,7 +35,7 @@
 #include "timeval.h"
 #include "vlog.h"
 
-/**Modificaciones boby UAH**/
+/**Modificaciones UAH**/
 #include "../oflib/ofl-messages.h"
 // #include "vconn.h" //Temporal
 #include "vconn-stream.h" //Temporal
@@ -78,7 +62,7 @@ struct in_band_data
     struct netdev *of_device;
     struct rconn *controller;
     int n_queued;
-    //Modificaciones Boby UAH//
+    //Modificaciones UAH//
     struct port_watcher *pw; // Para poder buscar el número del puerto físico compartido con el puerto local
     //+++FIN+++//
 };
@@ -171,11 +155,9 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
 
     struct ofl_msg_packet_in *oflpi;
     struct eth_header *eth;
-    struct ofpbuf *payload, buf_arp, buf_amaru;
+    struct ofpbuf *payload, buf_arp, buf_ehddp;
     struct ofpbuf *buf;
-    uint32_t ip4_aux_1, ip4_aux_2;
-    char ip4_1[INET_ADDRSTRLEN], ip4_2[INET_ADDRSTRLEN];
-    struct flow flow, flow_inv = {0};
+    struct flow flow, flow_inv = {0}, flow_tcp = {0};
     uint32_t in_port, out_port;      /*, priority = 0xfff1; */
     uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
 
@@ -206,28 +188,27 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
     {
         netdev_get_in4(in_band->of_device, &local_ip);
     }
-    //Manejamos el paquete amaru que indica el neuvo puerto local
-    if (eth->eth_type == htons(ETH_TYPE_AMARU))
+    //Manejamos el paquete ehddp que indica el nuevo puerto local
+    if (eth->eth_type == htons(ETH_TYPE_EHDDP) || eth->eth_type == htons(ETH_TYPE_EHDDP_INV))
     {
         uint32_t *new_local_port, *old_local_port;
         uint8_t *char_size, mac[ETH_ADDR_LEN];
         char *port_name, ip_char[INET_ADDRSTRLEN];
-        struct in_addr *local_ip_amaru, controller_ip;
-        // update_port_watcher_ports_UAH(in_band->pw); // Se intenta actualizar los puertos del port_watcher.
-        buf_amaru = *payload;
-        ofpbuf_try_pull(&buf_amaru, ETH_HEADER_LEN);                          //Nos deshacemos de la cabecera ethernet
-        new_local_port = ofpbuf_try_pull(&buf_amaru, sizeof(uint32_t));       //Se obtiene el número del nuevo puerto local
-        char_size = ofpbuf_try_pull(&buf_amaru, sizeof(uint8_t));             //Se obtiene el tamaño del nombre del puerto
-        port_name = ofpbuf_try_pull(&buf_amaru, *char_size);                  //Se obtiene el nombre del nuevo puerto local
-        local_ip_amaru = ofpbuf_try_pull(&buf_amaru, INET_ADDRSTRLEN);        //Se obtiene la ip del puerto local
-        memcpy(mac, ofpbuf_try_pull(&buf_amaru, ETH_ADDR_LEN), ETH_ADDR_LEN); //Se obtiene la MAC del puerto local
-        old_local_port = ofpbuf_try_pull(&buf_amaru, sizeof(uint32_t));       //Se obtiene el número del antiguo puerto local
+        struct in_addr *local_ip_ehddp, controller_ip;
+        
+        buf_ehddp = *payload;
+        ofpbuf_try_pull(&buf_ehddp, ETH_HEADER_LEN);                          //Nos deshacemos de la cabecera ethernet
+        new_local_port = ofpbuf_try_pull(&buf_ehddp, sizeof(uint32_t));       //Se obtiene el número del nuevo puerto local
+        char_size = ofpbuf_try_pull(&buf_ehddp, sizeof(uint8_t));             //Se obtiene el tamaño del nombre del puerto
+        port_name = ofpbuf_try_pull(&buf_ehddp, *char_size);                  //Se obtiene el nombre del nuevo puerto local
+        local_ip_ehddp = ofpbuf_try_pull(&buf_ehddp, INET_ADDRSTRLEN);        //Se obtiene la ip del puerto local
+        memcpy(mac, ofpbuf_try_pull(&buf_ehddp, ETH_ADDR_LEN), ETH_ADDR_LEN); //Se obtiene la MAC del puerto local
+        old_local_port = ofpbuf_try_pull(&buf_ehddp, sizeof(uint32_t));       //Se obtiene el número del antiguo puerto local
 
-        inet_ntop(AF_INET, &local_ip_amaru->s_addr, ip_char, INET_ADDRSTRLEN);
-        VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: AMARU PACKET  NEW PORT = %s(%u)\t IP: %s", port_name, *new_local_port, ip_char);
+        inet_ntop(AF_INET, &local_ip_ehddp->s_addr, ip_char, INET_ADDRSTRLEN);
+        VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: EHDDP PACKET  NEW PORT = %s(%u)\t IP: %s", port_name, *new_local_port, ip_char);
         controller_ip.s_addr = rconn_get_ip(in_band->controller);
-        install_new_localport_rules_UAH(r->halves[HALF_LOCAL].rconn, new_local_port, local_ip_amaru, &controller_ip, mac, old_local_port);
-        // modify_socket_options_rconn_UAH(r->halves[HALF_REMOTE].rconn, port_name);
+        install_new_localport_rules_UAH(r->halves[HALF_LOCAL].rconn, new_local_port, local_ip_ehddp, &controller_ip, mac, old_local_port);
 
         VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: Puerto local PORT WATCHER = %u", get_pw_local_port_number_UAH(in_band->pw));
 
@@ -251,9 +232,7 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
 
             //Se configura la regla inversa
             flow_inv.dl_type = flow.dl_type;
-            // flow_inv.nw_dst = flow.nw_src;
             memcpy(flow_inv.dl_dst, eth->eth_src, ETH_ADDR_LEN); // MAC switch origen como destino
-            // queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, ntohl(oflpi->buffer_id), in_port, IDLE_ARP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
             queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, buffer_id, in_port, IDLE_ARP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
 
             /* If the switch didn't buffer the packet, we need to send a copy. */
@@ -273,28 +252,26 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
             return false;
         }
     }
-    else if (eth->eth_type == htons(ETH_TYPE_IP) && flow.nw_dst == rconn_get_ip(in_band->controller) && flow.nw_src != local_ip.s_addr) //Se podría quitar esta última condición
+    else if (eth->eth_type == htons(ETH_TYPE_IP) && flow.nw_dst == rconn_get_ip(in_band->controller))
     {
         is_controller_mac(eth->eth_src, in_band);
         out_port = get_pw_local_port_number_UAH(in_band->pw);
-
-        ip4_aux_1 = flow.nw_dst;
-        ip4_aux_2 = flow.nw_src;
-
-        inet_ntop(AF_INET, &ip4_aux_1, ip4_1, INET_ADDRSTRLEN);
-        inet_ntop(AF_INET, &ip4_aux_2, ip4_2, INET_ADDRSTRLEN);
-        VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: Reglas SWITCH-CTRL %u==%s---%u==%s", ip4_aux_2, ip4_2, ip4_aux_1, ip4_1);
-
-        // queue_tx(rc, in_band, make_add_simple_flow(&flow, ntohl(oflpi->buffer_id), out_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de ida
-        queue_tx(rc, in_band, make_add_simple_flow(&flow, ntohl(buffer_id), out_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de ida
+        flow_tcp.dl_type = flow.dl_type;
+        flow_tcp.nw_proto = flow.nw_proto;
+        flow_tcp.nw_src = flow.nw_src;
+        flow_tcp.nw_dst = flow.nw_dst;
+        flow_tcp.in_port = flow.in_port;
+        
+        queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), out_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de ida
+        memset(&flow_tcp, 0, sizeof(struct flow));
 
         //Se configura la regla inversa
-        flow_inv.dl_type = flow.dl_type;
-        flow_inv.nw_proto = flow.nw_proto;
-        flow_inv.nw_dst = flow.nw_src;
-        flow_inv.nw_src = flow.nw_dst;
-        // queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, ntohl(oflpi->buffer_id), in_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
-        queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, ntohl(buffer_id), in_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
+        flow_tcp.dl_type = flow.dl_type;
+        flow_tcp.nw_proto = flow.nw_proto;
+        flow_tcp.nw_dst = flow.nw_src;
+        flow_tcp.nw_src = flow.nw_dst;
+        
+        queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), in_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
 
         /* If the switch didn't buffer the packet, we need to send a copy. */
         if (ntohl(oflpi->buffer_id) == UINT32_MAX)
@@ -346,19 +323,6 @@ in_band_status_cb(struct status_reply *sr, void *in_band_)
                              ETH_ADDR_ARGS(controller_mac));
         }
     }
-}
-
-void get_ofp_packet_payload(struct ofp_packet_in *opi UNUSED, struct ofpbuf *payload UNUSED)
-{
-    //payload->data = opi->data;
-    //payload->size = ntohs(opi->header.length) - offsetof(struct ofp_packet_in,
-    //                                                   data);
-    //**Modificaciones boby UAH**//
-    // payload->data = opi->data;
-    VLOG_WARN(LOG_MODULE, "HEADER LENGTH=%" PRIu16 "\tTOTAL LENGTH=%" PRIu16 "\tPACKET_IN LENGH=%zu", ntohs(opi->header.length), ntohs(opi->total_len), sizeof(*opi));
-    // VLOG_WARN(LOG_MODULE, "SIZE ntohs=%u\tSIZE=%u",ntohs(opi->header.length) - offsetof(struct ofp_packet_in,data),opi->header.length - offsetof(struct ofp_packet_in,data));
-    // payload->size = ntohs(opi->header.length) - offsetof(struct ofp_packet_in,data);
-    ////
 }
 
 // //**FIN**//
@@ -414,18 +378,18 @@ static struct hook_class in_band_hook_class = {
     NULL,                    /* closing_cb */
 };
 
-//Modificaciones Boby UAH//
-void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *in_band)
+//Modificaciones UAH//
+void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *in_band, uint16_t of_port)
 {
     struct in_addr local_ip;
     struct flow arp_flow = {0}, tcp_flow = {0}, local_mac_flow = {0};
     uint32_t local_port_no;
     uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
-    // uint16_t priority = 0xfff0;
-    // uint16_t priority_drop = 0xffff;
+
     arp_flow.dl_type = htons(ETH_TYPE_ARP);
     tcp_flow.dl_type = htons(ETH_TYPE_IP);
     tcp_flow.nw_proto = IP_TYPE_TCP;
+    tcp_flow.tp_dst = htons(of_port);
 
     /*¡¡¡¡Estas reglas no son necesarias para el simple_switch_13 de RYU. Tampoco son necesarias con ONOS si se utiliza RECTIVE FORWARDING.!!!!*/
     rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); // Regla para procesar los paquetes ARP de otros switches.
@@ -436,28 +400,6 @@ void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *i
     local_port_no = get_pw_local_port_number_UAH(in_band->pw); // Se obtiene el número del puerto físico que comparte interfaz con el puerto local.
     VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: Puerto físico del controlador = %u", local_port_no);
     netdev_get_in4(in_band->of_device, &local_ip);
-
-    //!!Los drops configurados en el puerto local no harían falta al haber desactivado el procesamiento de paquetes en el puerto local!!
-    // arp_flow.in_port = htonl(OFPP_LOCAL);
-    // arp_flow.nw_dst = 0; // Drop sin tener en cuenta la IP destino
-    // rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, priority_drop), NULL);
-
-    // // Drop TCP entrante en el puerto local
-    // tcp_flow.in_port = htonl(OFPP_LOCAL);
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, priority_drop), NULL);
-
-    /*Los DROP utilizando la dirección IP de la interfaz del puerto local pueden sustituirse por los dos siguientes DROP que utilizan la dirección MAC*/
-    /*Así se aumenta la compatibilidad ya que funcionaría con ONOS y RYU sin hacer más cambios*/
-    // Drop TCP con destino el Switch e in_port = puerto físico del controlador
-    // tcp_flow.nw_dst = local_ip.s_addr;
-    // tcp_flow.in_port = htonl(local_port_no);
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
-
-    // // Drop TCP con origen el Switch
-    // tcp_flow.nw_src = local_ip.s_addr;
-    // tcp_flow.nw_dst = 0;
-    // tcp_flow.in_port = htonl(local_port_no);
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
 
     //Se instalan dos reglas para no procesar en la interfaz del puerto local los paquetes con MAC origen/destino la de la interfaz del puerto local
     //MAC ORIGEN LA DE LA INTERFAZ DEL PUERTO LOCAL
@@ -545,7 +487,7 @@ void in_band_start(struct secchan *secchan,
     in_band->ml = mac_learning_create();
     in_band->of_device = NULL;
     in_band->controller = remote;
-    //Modificaciones Boby UAH//
+    //Modificaciones UAH//
     in_band->pw = pw;
     //+++FIN+++//
     switch_status_register_category(ss, "in-band", in_band_status_cb, in_band);
