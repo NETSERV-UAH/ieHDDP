@@ -91,12 +91,13 @@ udatapath/udatapath_ofdatapath-flow_entry.o: udatapath/flow_entry.c \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h udatapath/dp_actions.h \
- udatapath/flow_table.h udatapath/pipeline.h udatapath/flow_entry.h \
- udatapath/meter_table.h udatapath/meter_entry.h oflib/ofl-utils.h \
- lib/util.h lib/vlog.h lib/vlog-modules.def lib/../oflib/vlog-modules.def \
- lib/../oflib-exp/vlog-modules.def lib/../secchan/vlog-modules.def \
- lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
+ udatapath/dp_actions.h udatapath/flow_table.h udatapath/pipeline.h \
+ udatapath/flow_entry.h udatapath/meter_table.h udatapath/meter_entry.h \
+ oflib/ofl-utils.h lib/util.h lib/vlog.h lib/vlog-modules.def \
+ lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
+ lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
+ lib/../utilities/vlog-modules.def
 
 /usr/include/stdc-predef.h:
 
@@ -363,6 +364,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 udatapath/dp_actions.h:
 

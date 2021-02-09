@@ -76,6 +76,11 @@ extern struct packet *pkt_hello;
 extern struct mac_to_port bt_table;
 extern uint16_t type_sensor;
 extern uint8_t SENSOR_TO_SENSOR;
+
+uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
+bool local_port_ok = false;
+struct in_addr ip_in_band;
+uint64_t time_init_local_port = 0;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -197,7 +202,7 @@ udatapath_cmd(int argc, char *argv[])
         poll_block();
         
         /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-        if((time_msec() - deletetimeBT >= TIME_DELETE_BT*1000))
+        if((time_msec() - deletetimeBT >= TIME_DELETE_BT*1000) && dp->id != 1)
         {
             VLOG_INFO(THIS_MODULE,"Borramos los bloqueos antiguos");
             //Borramos tabla de vecinos para permitir movilidad de sensores
@@ -251,6 +256,7 @@ parse_options(struct datapath *dp, int argc, char *argv[])
         {"verbose",     optional_argument, 0, 'v'},
         {"help",        no_argument, 0, 'h'},
         {"version",     no_argument, 0, 'V'},
+        {"ip-inband",  required_argument, 0, 'I'}, //Modificación UAH
         {"no-slicing",  no_argument, 0, OPT_NO_SLICING},
         {"mfr-desc",    required_argument, 0, OPT_MFR_DESC},
         {"hw-desc",     required_argument, 0, OPT_HW_DESC},
@@ -269,6 +275,7 @@ parse_options(struct datapath *dp, int argc, char *argv[])
     for (;;) {
         int indexptr;
         int c;
+        char * ip_aux = NULL;
 
         c = getopt_long(argc, argv, short_options, long_options, &indexptr);
         if (c == -1) {
@@ -320,6 +327,15 @@ parse_options(struct datapath *dp, int argc, char *argv[])
         case 'L':
             local_port = optarg;
             break;
+
+        /*Modificación UAH*/
+        case 'I':
+            ip_aux = quitar_espacios(optarg); 
+            ip_in_band.s_addr = dp_set_ip_addr(ip_aux);
+            inet_ntop(AF_INET, &ip_in_band, ip_aux, INET_ADDRSTRLEN);
+            local_port = NULL;
+            break;
+        /*Fin modificación*/
 
         case OPT_NO_LOCAL_PORT:
             local_port = NULL;
@@ -395,7 +411,8 @@ usage(void)
            "  -v, --verbose=MODULE[:FACILITY[:LEVEL]]  set logging levels\n"
            "  -v, --verbose           set maximum verbosity level\n"
            "  -h, --help              display this help message\n"
-           "  -V, --version           display version information\n",
+           "  -V, --version           display version information\n"
+           "  -I, --ip-inband         the ip for the in band interface with format XXX.XXX.XXX.XXX\n /*Modificacion UAH*/", 
         ofp_rundir);
     exit(EXIT_SUCCESS);
 }

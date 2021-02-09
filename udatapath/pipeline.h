@@ -37,6 +37,8 @@ struct sender;
 //vecinos globales para asi poder pasar y seleccionar envios
 
 extern struct mac_to_port neighbor_table, bt_table;
+extern bool local_port_ok;
+
 //tiempo de vida del sensor 1.5 segundos]
 #define TIME_HELLO_SENSOR 1.5 
 //tiempo de vida del controlador en la tabla de controladores debe ser mas 

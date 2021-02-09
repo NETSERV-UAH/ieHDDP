@@ -91,10 +91,11 @@ udatapath/udatapath_ofdatapath-packet_handle_std.o: \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h oflib/ofl-actions.h \
- lib/packets.h lib/random.h udatapath/match_std.h nbee_link/nbee_link.h \
- lib/hmap.h lib/ofpbuf.h lib/packets.h lib/compiler.h lib/hash.h \
- oflib/oxm-match.h oflib/../oflib/ofl-structs.h oflib/oxm-match.def
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
+ oflib/ofl-actions.h lib/packets.h lib/random.h udatapath/match_std.h \
+ nbee_link/nbee_link.h lib/hmap.h lib/ofpbuf.h lib/packets.h \
+ lib/compiler.h lib/hash.h oflib/oxm-match.h oflib/../oflib/ofl-structs.h \
+ oflib/oxm-match.def
 
 /usr/include/stdc-predef.h:
 
@@ -345,6 +346,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 oflib/ofl-actions.h:
 

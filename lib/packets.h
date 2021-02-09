@@ -106,6 +106,7 @@ static inline bool eth_addr_is_reserved(const uint8_t ea[ETH_ADDR_LEN])
 #define ETH_TYPE_MPLS_MCAST    0x8848
 
 #define ETH_TYPE_EHDDP	   0xFFAA //JAH EHDDP TYPE ETH
+#define ETH_TYPE_EHDDP_INT 0xFFBB //JAH EHDDP TYPE ETH
 
 #define ETH_HEADER_LEN 14
 #define ETH_PAYLOAD_MIN 46
@@ -417,16 +418,20 @@ struct ehddp_header{
     uint8_t last_mac[ETH_ADDR_LEN];
     uint8_t src_mac[ETH_ADDR_LEN];
     uint32_t time_block;
-    uint8_t configurations[EHDDP_MAX_ELEMENTS];
-    uint16_t type_devices[EHDDP_MAX_ELEMENTS];
-    uint64_t ids[EHDDP_MAX_ELEMENTS];
-    uint32_t in_ports[EHDDP_MAX_ELEMENTS];
-    uint32_t out_ports[EHDDP_MAX_ELEMENTS];
+    //uint8_t configurations[EHDDP_MAX_ELEMENTS];
+    //uint16_t type_devices[EHDDP_MAX_ELEMENTS];
+    //uint64_t ids[EHDDP_MAX_ELEMENTS];
+    //uint32_t in_ports[EHDDP_MAX_ELEMENTS];
+    //uint32_t out_ports[EHDDP_MAX_ELEMENTS];
 }__attribute__((packed));
 
-BUILD_ASSERT_DECL(((4*sizeof(uint8_t)) + (2*sizeof(uint64_t)) + sizeof(uint32_t) + 3 * ETH_ADDR_LEN * sizeof(u_int8_t) +
+/*BUILD_ASSERT_DECL(((4*sizeof(uint8_t)) + (2*sizeof(uint64_t)) + sizeof(uint32_t) + 3 * ETH_ADDR_LEN * sizeof(u_int8_t) +
      (sizeof(uint8_t)*EHDDP_MAX_ELEMENTS) + (sizeof(uint16_t)*EHDDP_MAX_ELEMENTS) + (sizeof(uint64_t)*EHDDP_MAX_ELEMENTS) + 
-     (2*sizeof(uint32_t)*EHDDP_MAX_ELEMENTS)) == (sizeof(struct ehddp_header))); 
+     (2*sizeof(uint32_t)*EHDDP_MAX_ELEMENTS)) == (sizeof(struct ehddp_header))); */
+
+BUILD_ASSERT_DECL(((4*sizeof(uint8_t)) + (2*sizeof(uint64_t)) + sizeof(uint32_t) + 3 * ETH_ADDR_LEN * sizeof(u_int8_t)) 
+    == (sizeof(struct ehddp_header))); 
+
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 struct protocols_std {

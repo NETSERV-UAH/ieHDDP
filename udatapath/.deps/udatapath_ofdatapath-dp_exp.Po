@@ -91,7 +91,7 @@ udatapath/udatapath_ofdatapath-dp_exp.o: udatapath/dp_exp.c \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h \
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
  include/openflow/openflow-ext.h lib/vlog.h lib/vlog-modules.def \
  lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
  lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
@@ -362,6 +362,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 include/openflow/openflow-ext.h:
 

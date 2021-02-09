@@ -202,11 +202,11 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
     memcpy(&pkt->handle_std->proto->ehddp->src_mac, device_mac, sizeof(uint8_t)*ETH_ADDR_LEN);
     pkt->handle_std->proto->ehddp->time_block = time_block;
 
-    pkt->handle_std->proto->ehddp->configurations[0] = configurations;
+    /*pkt->handle_std->proto->ehddp->configurations[0] = configurations;
     pkt->handle_std->proto->ehddp->type_devices[0] = type_devices;
     pkt->handle_std->proto->ehddp->ids[0] = mac_device_64;
     pkt->handle_std->proto->ehddp->in_ports[0] = in_ports;
-    pkt->handle_std->proto->ehddp->out_ports[0] = out_ports;
+    pkt->handle_std->proto->ehddp->out_ports[0] = out_ports;*/
    
     //validamos el paquete
     packet_handle_std_validate(pkt->handle_std);
@@ -266,7 +266,7 @@ struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32
     uint8_t char_size;
     struct in_addr local_ip = *ip;
     uint8_t MAC_BC[ETH_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    uint16_t type_array = bigtolittle16(ETH_TYPE_EHDDP); /*eHDDP type*/
+    uint16_t type_array = bigtolittle16(ETH_TYPE_EHDDP_INT); /*eHDDP type*/
     
     //Creamos el buffer del paquete
     buf = ofpbuf_new(LEN_EHDDP_PORT_PKT); //(sizeof(struct Amaru_header)+sizeof(struct eth_header)); //sizeof(struct eth_header));

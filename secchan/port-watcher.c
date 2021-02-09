@@ -142,7 +142,7 @@ call_local_port_changed_callbacks(struct port_watcher *pw)
     //**Modificaciones boby UAH**//
 
     port = lookup_port(pw, OFPP_LOCAL_AUX);
-    ///////
+    /*+++++FIN+++++*/
 
     /* Log the name of the local port. */
     if (port)
@@ -181,10 +181,8 @@ update_phy_port(struct port_watcher *pw, struct ofp_port *opp,
     struct ofp_port *old;
     uint32_t port_no;
     //**Modificaciones Boby UAH**//
-    // port_no = ntohl(opp->port_no);
     port_no = (ntohl(opp->port_no) == OFPP_LOCAL) ? OFPP_LOCAL_AUX : ntohl(opp->port_no);
-
-    ///////
+    /*+++++FIN+++++*/
 
     old = lookup_port(pw, port_no);
     if (reason == OFPPR_DELETE && old)
@@ -195,14 +193,6 @@ update_phy_port(struct port_watcher *pw, struct ofp_port *opp,
     }
     else if (reason == OFPPR_MODIFY || reason == OFPPR_ADD)
     {
-        /* TODO Zoltan: Temporarily removed when moving to Openflow 1.1 */
-        /*
-        if (old) {
-            uint32_t s_mask = htonl(OFPPS_STP_MASK);
-            opp->state = (opp->state & ~s_mask) | (old->state & s_mask);
-        }
-        if (!old || opp_differs(opp, old)) {
-        */
         struct ofp_port new = *opp;
         sanitize_opp(&new);
         call_port_changed_callbacks(pw, port_no, old, &new);
@@ -214,9 +204,7 @@ update_phy_port(struct port_watcher *pw, struct ofp_port *opp,
         {
             port_array_set(&pw->ports, port_no, xmemdup(&new, sizeof new));
         }
-        /*
-        }
-        */
+
     }
 }
 

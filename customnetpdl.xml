@@ -527,28 +527,15 @@
 					<field type="variable" name="last_mac" longname="{0x8000 48} Last MAC" expr="buf2int(previous_size_mac)" showtemplate="MACaddressEth"/>
 					<field type="variable" name="src_mac" longname="{0x8000 47} Source MAC" expr="buf2int(previous_size_mac)" showtemplate="MACaddressEth"/>
 					<field type="fixed" name="time_block" longname="{0x8000 49} Time to block" size="4" showtemplate="FieldDec" />
-					<!--Leemos parte variable -->
-					<loop type="times2repeat" expr="buf2int(num_devices)">-->
+					<!--Leemos parte variable 
+					<loop type="times2repeat" expr="buf2int(num_devices)">
 						
 						<field type="fixed" name="configurations" longname="{0x8000 50}" size="1" showtemplate="FieldDec" />
 						<field type="fixed" name="type_devices" longname="{0x8000 51} type_devices" size="2" showtemplate="FieldDec"/>
 						<field type="fixed" name="ids" longname="{0x8000 52} id" size="8" showtemplate="FieldDec" /> 
 						<field type="fixed" name="in_ports" longname="{0x8000 53} in_ports" size="4" showtemplate="FieldDec"/>
 						<field type="fixed" name="out_ports" longname="{0x8000 54} out_ports" size="4" showtemplate="FieldDec"/>
-						<!--
-						<field type="fixed" name="configurations" longname="{0x8000 50}" size="1" showtemplate="FieldDec" />
-							<field type="bit" name="type_len" longname="Device Type Length" mask="0xC0" size="1" showtemplate="FieldBin"/>
-							<field type="bit" name="Id_len" longname="Device ID length" mask="0x38" size="1" showtemplate="FieldBin"/>
-							<field type="bit" name="port_len" longname="Port Length" mask="0x06" size="1" showtemplate="FieldBin"/>
-							<field type="bit" name="bidirectional" longname="Bidiractional" mask="0x01" size="1" showtemplate="FieldBin"/>
-						</field>
-				
-						<field type="variable" name="type_devices" longname="{0x8000 51} type_devices" expr="buf2int(type_len)+1" showtemplate="FieldDec"/>
-						<field type="variable" name="ids" longname="{0x8000 52} id" expr="buf2int(Id_len)+1" showtemplate="FieldDec" /> 
-						<field type="variable" name="in_ports" longname="{0x8000 53} in_ports" expr="buf2int(port_len)+1" showtemplate="FieldDec"/>
-						<field type="variable" name="out_ports" longname="{0x8000 54} out_ports" expr="buf2int(bidirectional)" showtemplate="FieldDec"/>
-						-->
-					</loop>
+					</loop>  -->
                 </fields>
         </format>
 </protocol>

@@ -680,3 +680,22 @@ uint32_t get_dp_local_port_number_UAH(struct datapath *dp)
     }
     return 0;
 }
+
+uint32_t dp_set_ip_addr(char * ip_aux){
+    return inet_addr(ip_aux);
+}
+
+char * quitar_espacios(char * optarg){
+    char * result = malloc(sizeof(char) * strlen(optarg));
+    int i = 0, p = 0;
+
+    for (i = 0; i< strlen(optarg); i++)
+    {
+        if (optarg[i] != ' '){
+            result[p] = optarg[i];
+            p++;
+        }
+    }
+
+    return result;
+}

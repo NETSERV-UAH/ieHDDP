@@ -100,6 +100,8 @@ struct mac_port_time{
     uint16_t port_in;
     uint64_t valid_time_entry;
     struct mac_port_time *next;
+    bool nuevo_puerto;
+    uint64_t num_sec;
     uint16_t type; //se usa para identificar el tipo de registro, por ejemplo tipo de sensor
 };
 
@@ -114,6 +116,10 @@ struct mac_to_port bt_table;
 uint16_t type_sensor;
 uint8_t SENSOR_TO_SENSOR; // 0 = no se permite conexiones entre sensores; 1 = se permite conexiones entre sensores
 
+extern uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
+extern bool local_port_ok;
+extern uint64_t time_init_local_port;
+extern struct in_addr ip_in_band;
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #define DP_MAX_PORTS 255
@@ -215,23 +221,17 @@ int num_port_available(struct datapath * dp);
 //se crea una nueva tabla mac_to_port en cada switch
 void mac_to_port_new(struct mac_to_port *mac_port);
 //add generic element
-int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time);
+int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time, uint64_t num_sec);
 //update element (time and port) 
-int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time);
+int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time, uint64_t num_sec);
 //refresh time in table
-int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t time);
+int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t time, uint64_t num_sec);
 //found if is posible the out port of the mac
-int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN]);
-//found if is posible the out port of the mac with the position on table
-int mac_to_port_found_port_position(struct mac_to_port *mac_port, uint64_t position);
+int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t num_sec);
 //found if is posible the out port of the mac with the position on table
 int mac_to_port_found_mac_position(struct mac_to_port *mac_port, uint64_t position, uint8_t * Mac);
 //check de timeout of the mac and port
-int mac_to_port_check_timeout(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN]);
-//check de timeout of the mac and port
 int mac_to_port_delete_timeout(struct mac_to_port *mac_port);
-//chect port and delete of table
-int mac_to_port_delete_port(struct mac_to_port *mac_port, int port);
 
 
 /*Debug function */

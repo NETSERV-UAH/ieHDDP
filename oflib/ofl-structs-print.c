@@ -453,6 +453,7 @@ ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
         case OFPXMT_OFB_EHDDP_TIM_BLO:
             fprintf(stream,"BLOCK TIME: \"%"PRIu32"\"",*((uint32_t*)(f->value)));
             break;
+        /*
         case OFPXMT_OFB_EHDDP_CONFIG:
             fprintf(stream,"DEVICE TYPE LEN: \"%"PRIu8"\"",*((uint8_t*)(f->value))& 0b11000000);
             fprintf(stream,"DEVICE ID LEN: \"%"PRIu8"\"",*((uint8_t*)(f->value)) & 0b00111000);
@@ -471,6 +472,7 @@ ofl_structs_oxm_tlv_print(FILE *stream, struct ofl_match_tlv *f)
         case OFPXMT_OFB_EHDDP_OUT_PORTS:
             fprintf(stream,"OutPortsList: \"%"PRIu32"\"",*((uint32_t*)(f->value)));
             break;
+        */
         /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 		default:
 			fprintf(stream, "unknown type %d", field);

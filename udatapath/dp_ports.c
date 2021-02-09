@@ -39,12 +39,6 @@
 #include "vlog.h"
 #define LOG_MODULE VLM_dp_ports
 
-/*Modificaciones UAH*/
-uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
-bool local_port_ok = false;
-uint64_t time_init_local_port = 0;
-/*+++FIN+++*/
-
 static struct vlog_rate_limit rl = VLOG_RATE_LIMIT_INIT(60, 60);
 
 #if defined(OF_HW_PLAT)
@@ -223,13 +217,6 @@ dp_ports_run(struct datapath *dp) {
 
     struct sw_port *p, *pn;
 
-    /*Modificacion UAH*/
-    uint64_t tiempo_transcurrido = 0;
-    struct in_addr ip_if;
-    uint32_t old_local_port;
-    uint8_t mac[ETH_ADDR_LEN];
-    /*+++FIN+++*/
-
 #if defined(OF_HW_PLAT) && !defined(USE_NETDEV)
     { /* Process packets received from callback thread */
         struct ofpbuf *buffer;
@@ -262,47 +249,17 @@ dp_ports_run(struct datapath *dp) {
         if (link_state == NETDEV_LINK_UP){
             p->conf->state &= ~OFPPS_LINK_DOWN;
             dp_port_live_update(p);
-            /*Modificaciones UAH
-            if (p->conf->port_no != OFPP_LOCAL)
-            {
-                enable_valid_amacs_UAH(&table_AMAC, p->conf->port_no); //Se reactivan las amacs válidas si estaban desactivadas
-                visualizar_tabla_AMAC(&table_AMAC, dp->id);
-            }
-            +++FIN+++*/
         }
         else if (link_state == NETDEV_LINK_DOWN){
-            VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Estado del puerto %s (%u) = %d", p->conf->name, p->conf->port_no, link_state);
             p->conf->state |= OFPPS_LINK_DOWN;
             dp_port_live_update(p);
-            VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Se ha caído la interfaz %s (%u)", p->conf->name, p->conf->port_no);
-
-            /*Modificaciones UAH*/
-            tiempo_transcurrido = time_msec() - time_init_local_port;
-            if (p->conf->port_no == OFPP_LOCAL || (tiempo_transcurrido < 5000)) //3000ms = 3s; Se puede especificar otro valor
-            {
-                continue;
-            }
-
-            if (dp->local_port != NULL && local_port_ok)
-            {
-                if (!strcmp(p->conf->name, dp->local_port->conf->name) && (dp->id != 1))
-                {
-                    local_port_ok = false;
-                    old_local_port = p->conf->port_no;
-                    memcpy(mac, netdev_get_etheraddr(dp->local_port->netdev), ETH_ADDR_LEN);
-                    ip_if = remove_local_port_UAH(dp);
-                    configure_new_local_port_ehddp_UAH(dp,&ip_if, mac, old_local_port);
-                    VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: Se ha configurado el nuevo puerto local >>%s<<", dp->local_port->conf->name);
-                    time_init_local_port = 0;
-                }
-            }
-            /*+++FIN+++*/
         }
 
         if (IS_HW_PORT(p)) {
             continue;
         }
-        /*Modificaciones UAH */
+
+        /*Modificaciones Boby UAH */
         if (p->conf->port_no == OFPP_LOCAL)
         {
             continue;
@@ -326,7 +283,8 @@ dp_ports_run(struct datapath *dp) {
             buffer = NULL;
 
             /*Modificaciones UAH*/
-            /*Se comprueba si se ha recibido paquetes en la interfaz configurada como puerto local para poder dar por finalizada la configuración del puerto local*/
+            /*Se comprueba si se ha recibido paquetes en la interfaz configurada como puerto local 
+            para poder dar por finalizada la configuración del puerto local*/
             if (dp->local_port != NULL && !strcmp(p->conf->name, dp->local_port->conf->name))
             {
 
@@ -335,8 +293,9 @@ dp_ports_run(struct datapath *dp) {
                 {
                     VLOG_WARN(LOG_MODULE, "[DP PORTS RUN]: El nuevo puerto local >> %s << está operativo.", dp->local_port->conf->name);
 
-                    local_port_ok = true; //Si se ha recibido paquetes a través de la interfaz configurada como nuevo puerto local
-                                          //se considera que ha finalizado la configuración del nuevo puerto local
+                    /*Si se ha recibido paquetes a través de la interfaz configurada como nuevo puerto local
+                    se considera que ha finalizado la configuración del nuevo puerto local*/
+                    local_port_ok = true; 
                 }
             }
             /*+++FIN+++*/
@@ -384,14 +343,18 @@ new_port(struct datapath *dp, struct sw_port *port, uint32_t port_no,
     if (error) {
         return error;
     }
+    /*Modificaciones UAH*/
+    VLOG_WARN(LOG_MODULE, "netdev->MAC: "ETH_ADDR_FMT"", ETH_ADDR_ARGS(netdev_get_etheraddr(netdev)));
+    if (!eth_addr_equals(netdev_get_etheraddr(netdev), old_local_port_MAC)){
+        memcpy(old_local_port_MAC, netdev_get_etheraddr(netdev), ETH_ADDR_LEN); //Guardamos la MAC inicial del puerto que va a ser configurado como local
+    }
+    if (new_mac)
+        VLOG_WARN(LOG_MODULE, "new_mac: "ETH_ADDR_FMT"", ETH_ADDR_ARGS(new_mac));
+    /*+++FIN+++*/
     if (new_mac && !eth_addr_equals(netdev_get_etheraddr(netdev), new_mac)) {
         /* Generally the device has to be down before we change its hardware
          * address.  Don't bother to check for an error because it's really
          * the netdev_set_etheraddr() call below that we care about. */
-
-        /*Modificaciones UAH*/
-        memcpy(old_local_port_MAC, netdev_get_etheraddr(netdev), ETH_ADDR_LEN); //Guardamos la MAC inicial del puerto que va a ser configurado como local
-        /*+++FIN+++*/
 
         netdev_set_flags(netdev, 0, false);
         error = netdev_set_etheraddr(netdev, new_mac);
@@ -726,7 +689,7 @@ dp_ports_output_all(struct datapath *dp, struct ofpbuf *buffer, int in_port, boo
         if (p->conf->port_no == in_port) {
             continue;
         }
-        // Se comparan los nombres de los puertos porque el el puerto local y otro puerto físico comparten la misma interfaz)
+        // Se comparan los nombres de los puertos porque el del puerto local y otro puerto físico comparten la misma interfaz)
         if (in_port == OFPP_LOCAL && !strcmp(p->conf->name, dp->local_port->conf->name)) 
         {
             continue;
@@ -1232,7 +1195,7 @@ void mac_to_port_new(struct mac_to_port *mac_port)
 }
 
 int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, 
-    uint16_t port_in, int time)
+    uint16_t port_in, int time, uint64_t num_sec)
 {
     struct mac_port_time *nuevo_elemento = NULL;
     struct mac_port_time *actual = mac_port->fin;
@@ -1242,9 +1205,11 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
 
     nuevo_elemento->port_in = port_in;
     //guardamos el momento en que la entrada deja de ser valida
-    nuevo_elemento->valid_time_entry = time_msec() + time * 1000;
+    nuevo_elemento->valid_time_entry = time_msec() + time;
     memcpy(nuevo_elemento->Mac, Mac, ETH_ADDR_LEN);
     nuevo_elemento->type = type;
+    nuevo_elemento->nuevo_puerto = true;
+    nuevo_elemento->num_sec = num_sec;
     nuevo_elemento->next = NULL;
 
     if(mac_port->inicio == NULL)
@@ -1259,7 +1224,7 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
 
 //update element
 int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, 
-    uint16_t port_in, int time) 
+    uint16_t port_in, int time, uint64_t num_sec) 
 {
     struct mac_port_time *aux = mac_port->inicio;
     
@@ -1268,12 +1233,18 @@ int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], 
         {
             if(memcmp(aux->Mac, Mac, ETH_ADDR_LEN) == 0)
             {
+                /*Indicamos si hay cambio de puerto*/
+                if (aux->port_in != port_in)
+                    aux->nuevo_puerto = true; 
+                else
+                    aux->nuevo_puerto = false; 
                 aux->port_in = port_in;
                 aux->type = type;
+                aux->num_sec = num_sec;
                 //miramos cual si el tiempo guardado + la actualizacion
-                if (time_msec() + (time * 1000) >= aux->valid_time_entry)
+                if (time_msec() + time >= aux->valid_time_entry)
                     // le metemos el tiempo correspondiente
-                    aux->valid_time_entry = time_msec() + (time * 1000); 
+                    aux->valid_time_entry = time_msec() + time;
                 //todo correcto
                 return 0; 
             }
@@ -1283,7 +1254,7 @@ int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], 
     return 1;//no se encontro la mac
 }
 
-int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t time) //update element
+int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t time, uint64_t num_sec) //update element
 {
     struct mac_port_time *aux = mac_port->inicio;
    
@@ -1293,8 +1264,10 @@ int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_
             if(memcmp(aux->Mac, Mac, ETH_ADDR_LEN) == 0)
             {
                 //miramos cual si el tiempo guardado + la actualizacion
-                if (time_msec() + (time * 1000) > aux->valid_time_entry)
-                    aux->valid_time_entry = time_msec() + (time * 1000); // le metemos el tiempo correspondiente
+                aux->nuevo_puerto = false;
+                aux->num_sec = num_sec;
+                if (time_msec() + time > aux->valid_time_entry)
+                    aux->valid_time_entry = time_msec() + time; // le metemos el tiempo correspondiente
                 return 0; //todo correcto
             }
             aux = aux->next; //pasamos al siguiente elemento de la lista
@@ -1303,7 +1276,7 @@ int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_
     return -1;//no se encontro la mac
 }
 
-int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN])
+int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t num_sec)
 //chequemos si existe una mac y devolvemos un puerto
 {
     struct mac_port_time *aux = mac_port->inicio;
@@ -1315,7 +1288,7 @@ int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LE
         {
             if( (memcmp(aux->Mac, Mac, ETH_ADDR_LEN) == 0))
             {
-                if (marca_tiempo_msec <= aux->valid_time_entry)
+                if (marca_tiempo_msec <= aux->valid_time_entry && aux->num_sec == num_sec)
                     //todo correcto
                     port_select = aux->port_in; 
                 else 
@@ -1328,28 +1301,6 @@ int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LE
     }
 
     return port_select; //si no existe tal puerto
-}
-
-int mac_to_port_found_port_position(struct mac_to_port *mac_port, uint64_t position)
-//chequemos si existe una mac y devolvemos un puerto
-{
-    struct mac_port_time *aux = mac_port->inicio;
-    uint64_t marca_tiempo_msec = time_msec();
-    int pos = 0;
-    
-    if (mac_port->num_element > 0){
-        while(aux != NULL)
-        {
-            if( pos == position && (marca_tiempo_msec <= aux->valid_time_entry))
-                return aux->port_in; 
-            else{
-                //actual pasa a ser el siguiente
-                aux = aux->next;
-                pos++;
-            }
-        }
-    }
-    return -1; //si no existe tal puerto
 }
 
 int mac_to_port_found_mac_position(struct mac_to_port *mac_port, uint64_t position, uint8_t * Mac){
@@ -1379,27 +1330,6 @@ int mac_to_port_found_mac_position(struct mac_to_port *mac_port, uint64_t positi
     }
     VLOG_INFO(LOG_MODULE, "MAC NO encontrada devolvemos -1");
     return -1; //si no existe tal puerto
-}
-
-int mac_to_port_check_timeout(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN])
-{
-    struct mac_port_time *aux = mac_port->inicio;
-    uint64_t marca_tiempo_msec = time_msec();
-    //buscamos la relacion
-    if (mac_port->num_element > 0){
-        while(aux != NULL)
-        {
-            if (memcmp(aux->Mac, Mac, ETH_ADDR_LEN) == 0)
-            {
-                if (marca_tiempo_msec > aux->valid_time_entry ) //mseg -> me devuelve en milisegundos
-                    return 1; // si hemos superado el tiempo de bloqueo
-                else
-                    return 0; //si no se ha superado el tiempo de bloqueo
-                }
-            aux = aux->next;
-        }
-    }
-    return 2; //no existe la pareja mac -> port_in
 }
 
 int mac_to_port_delete_timeout(struct mac_to_port *mac_port)
@@ -1462,49 +1392,6 @@ int mac_to_port_delete_timeout(struct mac_to_port *mac_port)
     return 0;
 }
 
-int mac_to_port_delete_port(struct mac_to_port *mac_port, int port)
-{
-    struct mac_port_time *anterior = mac_port->inicio;
-    struct mac_port_time *actual = mac_port->inicio;
-
-    
-    while (actual != NULL && mac_port->num_element > 0)
-    {
-        if ( actual->port_in == port )
-        {
-            if(actual == mac_port->inicio)
-            {
-                mac_port->inicio = actual->next;
-                if(mac_port->num_element == 1)
-                {
-                    mac_port->fin = NULL;
-                    mac_port->inicio = NULL;
-                }
-                anterior = mac_port->inicio;
-            }
-            else if(actual == mac_port->fin)
-            {
-                anterior->next = NULL;
-                mac_port->fin = anterior;
-            }
-            else
-                anterior->next = actual->next;
-            if (actual != NULL)
-                free(actual);
-            if (mac_port->num_element > 0 )
-                mac_port->num_element--;
-        }
-        else
-        {
-            anterior = anterior->next;
-        }
-        actual = anterior->next;
-    }
-    
-
-    return 0;
-}
-
 int num_port_available(struct datapath * dp){
     int num_port_inactivos = 0, i = 0;
 
@@ -1526,7 +1413,7 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 	struct mac_port_time *aux = mac_port->inicio;
 	int i=0,j=0;
 
-	sprintf(mac_tabla, "\npos|      Mac        |Puerto IN|Time|Type\n");
+	sprintf(mac_tabla, "DpID: %d \npos|      Mac        |Puerto IN|Time|Type\n", (int)id_datapath);
 	sprintf(mac_tabla + strlen(mac_tabla),"----------------------------------------------\n");
 	while(aux != NULL)
 	{
@@ -1559,7 +1446,7 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 		aux = aux->next;
 	}
 	sprintf(mac_tabla + strlen(mac_tabla),"\n");
-	log_uah(mac_tabla,id_datapath);
+	VLOG_INFO(LOG_MODULE, "%s\n", mac_tabla);
 }
 
 void log_uah(const void *Mensaje, int64_t id)
@@ -1593,7 +1480,8 @@ struct in_addr remove_local_port_UAH(struct datapath *dp)
 {
     int error;
     struct in_addr ip_0 = {INADDR_ANY}, ip_if;                                //Para poner a 0 la ip de la interfaz a eliminar
-    netdev_get_in4(dp->local_port->netdev, &ip_if);                           //Se obtiene la ip de la interfaz
+    
+    netdev_get_in4(dp->local_port->netdev, &ip_if);                           //Se obtiene la ip de la interfaz  
     netdev_set_in4(dp->local_port->netdev, ip_0, ip_0);                       //Se configura la ip a 0
     error = netdev_set_etheraddr(dp->local_port->netdev, old_local_port_MAC); //Se asigna la antigua MAC
     if (error)
@@ -1611,6 +1499,9 @@ struct in_addr remove_local_port_UAH(struct datapath *dp)
     dp->ports_num--; //Se decrementa el número de puertos
     dp->local_port = NULL;
 
+    if (ip_if.s_addr == INADDR_ANY)                                           //Si la IP es 0.0.0.0 es decir no hay
+        ip_if.s_addr = ip_in_band.s_addr;                                     //le asignamos la definida en la configuración incial
+        
     return ip_if;
 }
 
@@ -1621,9 +1512,14 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, 
     struct mac_port_time *aux = bt_table.inicio;
     char ip_aux[INET_ADDRSTRLEN];
     struct in_addr mask, local_ip = *ip;
-    while (aux != NULL)
+    if  (aux != NULL)
     {
         p = dp_ports_lookup(dp, aux->port_in);
+        if (p == NULL)
+        {
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Software port NO ENCONTRADO %d!!", aux->port_in);
+            return -1;
+        }
         error = dp_ports_add_local(dp, p->conf->name);
         inet_pton(AF_INET, "255.255.255.0", &(mask.s_addr));
         inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
@@ -1640,11 +1536,10 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, 
             return 1;
         }
         //Se envía al ofprotocol el nuevo puerto local
-        send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
+        if (old_local_port == 0)
+            send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
         return 0;
-        
-        //actual pasa a ser el siguiente
-        aux = aux->next;
+
     }
     return 1;
 }

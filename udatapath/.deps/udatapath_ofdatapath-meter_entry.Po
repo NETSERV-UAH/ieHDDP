@@ -91,9 +91,9 @@ udatapath/udatapath_ofdatapath-meter_entry.o: udatapath/meter_entry.c \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h udatapath/meter_entry.h \
- udatapath/meter_table.h udatapath/dp_actions.h lib/util.h \
- oflib/ofl-utils.h /usr/include/math.h \
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
+ udatapath/meter_entry.h udatapath/meter_table.h udatapath/dp_actions.h \
+ lib/util.h oflib/ofl-utils.h /usr/include/math.h \
  /usr/include/x86_64-linux-gnu/bits/math-vector.h \
  /usr/include/x86_64-linux-gnu/bits/libm-simd-decl-stubs.h \
  /usr/include/x86_64-linux-gnu/bits/flt-eval-method.h \
@@ -375,6 +375,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 udatapath/meter_entry.h:
 

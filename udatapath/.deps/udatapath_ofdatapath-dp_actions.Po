@@ -90,10 +90,10 @@ udatapath/udatapath_ofdatapath-dp_actions.o: udatapath/dp_actions.c \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h oflib/ofl-actions.h \
- udatapath/packet_handle_std.h lib/packets.h lib/random.h \
- udatapath/match_std.h nbee_link/nbee_link.h lib/hmap.h lib/ofpbuf.h \
- lib/packets.h udatapath/dp_actions.h oflib/ofl-log.h \
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
+ oflib/ofl-actions.h udatapath/packet_handle_std.h lib/packets.h \
+ lib/random.h udatapath/match_std.h nbee_link/nbee_link.h lib/hmap.h \
+ lib/ofpbuf.h lib/packets.h udatapath/dp_actions.h oflib/ofl-log.h \
  oflib/ofl-log-vlog.h lib/vlog.h lib/vlog-modules.def \
  lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
  lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
@@ -350,6 +350,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 oflib/ofl-actions.h:
 

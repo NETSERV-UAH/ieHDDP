@@ -91,11 +91,12 @@ udatapath/udatapath_ofdatapath-action_set.o: udatapath/action_set.c \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
  /usr/include/x86_64-linux-gnu/bits/local_lim.h \
  /usr/include/linux/limits.h \
- /usr/include/x86_64-linux-gnu/bits/posix2_lim.h oflib/ofl-actions.h \
- udatapath/dp_actions.h oflib/ofl-print.h oflib/ofl-print.h lib/util.h \
- lib/vlog.h lib/vlog-modules.def lib/../oflib/vlog-modules.def \
- lib/../oflib-exp/vlog-modules.def lib/../secchan/vlog-modules.def \
- lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def
+ /usr/include/x86_64-linux-gnu/bits/posix2_lim.h /usr/include/arpa/inet.h \
+ oflib/ofl-actions.h udatapath/dp_actions.h oflib/ofl-print.h \
+ oflib/ofl-print.h lib/util.h lib/vlog.h lib/vlog-modules.def \
+ lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
+ lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
+ lib/../utilities/vlog-modules.def
 
 /usr/include/stdc-predef.h:
 
@@ -360,6 +361,8 @@ lib/type-props.h:
 /usr/include/linux/limits.h:
 
 /usr/include/x86_64-linux-gnu/bits/posix2_lim.h:
+
+/usr/include/arpa/inet.h:
 
 oflib/ofl-actions.h:
 

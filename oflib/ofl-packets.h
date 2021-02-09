@@ -60,8 +60,9 @@
 #define IP_DSCP_MASK 0xfc
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-
-#define ETH_TYPE_EHDDP 0xFFAA //JAH-UAH
-#define ETH_TYPE_EHDDP_INV 0xAAFF //JAH-UAH Valores al reves para procesar el pipeline (Little Endian)
+#define ETH_TYPE_EHDDP     0xFFAA
+#define ETH_TYPE_EHDDP_INV 0xAAFF
+#define ETH_TYPE_EHDDP_INT 0xFFBB //JAH-UAH
+#define ETH_TYPE_EHDDP_INT_INV 0xBBFF //JAH-UAH Valores al reves para procesar el pipeline (Little Endian)
 
 #endif /* OFL_PACKETS_H */

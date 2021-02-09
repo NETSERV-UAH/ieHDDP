@@ -189,7 +189,7 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         netdev_get_in4(in_band->of_device, &local_ip);
     }
     //Manejamos el paquete ehddp que indica el nuevo puerto local
-    if (eth->eth_type == htons(ETH_TYPE_EHDDP) || eth->eth_type == htons(ETH_TYPE_EHDDP_INV))
+    if (eth->eth_type == htons(ETH_TYPE_EHDDP_INT) || eth->eth_type == htons(ETH_TYPE_EHDDP_INT_INV))
     {
         uint32_t *new_local_port, *old_local_port;
         uint8_t *char_size, mac[ETH_ADDR_LEN];
@@ -325,7 +325,7 @@ in_band_status_cb(struct status_reply *sr, void *in_band_)
     }
 }
 
-// //**FIN**//
+/*++++FIN++++*/
 static void
 in_band_local_port_cb(const struct ofp_port *port, void *in_band_)
 {
@@ -339,8 +339,7 @@ in_band_local_port_cb(const struct ofp_port *port, void *in_band_)
         {
             int error;
             netdev_close(in_band->of_device);
-            error = netdev_open(name, NETDEV_ETH_TYPE_NONE,
-                                &in_band->of_device);
+            error = netdev_open(name, NETDEV_ETH_TYPE_NONE, &in_band->of_device);
             if (error)
             {
                 VLOG_ERR(LOG_MODULE, "failed to open in-band control network device "
@@ -416,9 +415,7 @@ void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *i
 void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_local_port, struct in_addr *local_ip UNUSED, struct in_addr *controller_ip, uint8_t *mac, uint32_t *old_local_port)
 {
     uint32_t buffer_id = 0xffffffff;
-    // uint16_t priority_drop = 0xffff;
-    struct flow /*tcp_flow = {0},*/ tcp_mod_flow = {0}, del_drop = {0}, drop_mod_flow = {0};
-    // char ip_char[INET_ADDRSTRLEN];
+    struct flow tcp_mod_flow = {0}, del_drop = {0}, drop_mod_flow = {0};
 
     // Se eliminan los flujos DROP para el antiguo puerto local (Basados en la MAC de la interfaz)
     memcpy(del_drop.dl_src, mac, ETH_ADDR_LEN);
@@ -439,40 +436,11 @@ void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_lo
     memcpy(drop_mod_flow.dl_dst, mac, ETH_ADDR_LEN);
     rconn_send(local_rconn, make_add_simple_flow(&drop_mod_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
 
-    // Drop TCP con origen/destino el Switch teniendo en cuenta el nuevo puerto
-    // inet_ntop(AF_INET, &local_ip->s_addr, ip_char, INET_ADDRSTRLEN);
-    // VLOG_WARN(LOG_MODULE, "[INSTALL NEW LOCALPORT RULES]: IP: %s\t Puerto: %u", ip_char, *new_local_port);
-    // tcp_flow.dl_type = htons(ETH_TYPE_IP);
-    // tcp_flow.nw_proto = IP_TYPE_TCP;
-
-    // tcp_flow.nw_dst = local_ip->s_addr;
-    // tcp_flow.in_port = htonl(*new_local_port);
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
-
-    // tcp_flow.nw_src = local_ip->s_addr;
-    // tcp_flow.nw_dst = 0;
-    // tcp_flow.in_port = htonl(*new_local_port);
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
-
-    /*Se modifican los flujos TCP con destino el controlador para sacar los paquetes por el nuevo puerto de control*/
-    // inet_pton(AF_INET, "10.0.0.104", &del_ip.s_addr);
     tcp_mod_flow.dl_type = htons(ETH_TYPE_IP);
     tcp_mod_flow.nw_proto = IP_TYPE_TCP;
     tcp_mod_flow.nw_dst = controller_ip->s_addr;
-    // rconn_send(local_rconn, make_del_flow(&tcp_del_flow,0x00),NULL);
-    // rconn_send(local_rconn, modify_local_port_in_band_rules_UAH(&tcp_mod_flow, buffer_id, 0x00, RULE_PRIORITY, *new_local_port), NULL);
     rconn_send(local_rconn, make_del_flow(&tcp_mod_flow, 0x00), NULL);
 
-    // Se eliminan los flujos DROP para el antiguo puerto local (basados en la IP de la interfaz)
-    // tcp_del_flow.dl_type = htons(ETH_TYPE_IP);
-    // tcp_del_flow.nw_proto = IP_TYPE_TCP;
-    // tcp_del_flow.nw_dst = local_ip->s_addr;
-    // tcp_del_flow.in_port = htonl(*old_local_port);
-    // rconn_send(local_rconn, make_del_flow(&tcp_del_flow, 0x00), NULL);
-
-    // tcp_del_flow.nw_src = local_ip->s_addr;
-    // tcp_del_flow.nw_dst = 0;
-    // rconn_send(local_rconn, make_del_flow(&tcp_del_flow, 0x00), NULL);
 }
 /*+++FIN+++*/
 

@@ -1179,13 +1179,15 @@ dp_actions_output_port(struct packet *pkt, uint32_t out_port, uint32_t out_queue
             // TODO Zoltan: Implement
         case (OFPP_LOCAL):
         default: {
-            /* Modificacion UAH Discovery hybrid topologies, JAH-/
-            if (pkt->in_port == out_port) {
-                VLOG_WARN_RL(LOG_MODULE, &rl, "can't directly forward to input port.");
-            } else {
-            */    
+            /* Modificacion UAH Discovery hybrid topologies, JAH-*/
+            if (pkt->buffer->size > 1514){
+                struct ofl_msg_header *ofl_oh;
+                if (ofl_msg_unpack(pkt->buffer->data, pkt->buffer->size, &ofl_oh, NULL, NULL) != 0)
+                    ofl_msg_print(stdout, ofl_oh, NULL);
+            }
             VLOG_DBG_RL(LOG_MODULE, &rl, "Outputting packet on port %u.", out_port);
             dp_ports_output(pkt->dp, pkt->buffer, out_port, out_queue);
+            break;
             //}
         }
     }

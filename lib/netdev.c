@@ -1233,6 +1233,12 @@ int netdev_send(struct netdev *netdev, const struct ofpbuf *buffer,
 
     assert(class_id <= NETDEV_MAX_QUEUES);
 
+    if(netdev->mtu < buffer->size)
+    {
+        VLOG_WARN_RL(LOG_MODULE, &rl, "Ojo problemas de tamaño %d -> %lu", netdev->mtu, buffer->size);
+        return -1;
+    }
+
     do
     {
         n_bytes = write(netdev->queue_fd[class_id], buffer->data, buffer->size);
@@ -1488,12 +1494,7 @@ do_update_flags(struct netdev *netdev, enum netdev_flags off,
 {
     int old_flags, new_flags;
     int error;
-    /*Modificaciones Boby UAH*/
-    int int_off, int_on;
-    int_off = nd_to_iff_flags(off);
-    int_on = nd_to_iff_flags(on);
-    VLOG_WARN(LOG_MODULE, "[DO UPDATE FLAGS]: OFF FLAGS = %d\t ON FLAGS = %d", int_off, int_on);
-    /*+++FIN+++*/
+
     error = get_flags(netdev->name, &old_flags);
     if (error)
     {

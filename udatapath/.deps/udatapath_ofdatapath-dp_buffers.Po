@@ -89,10 +89,10 @@ udatapath/udatapath_ofdatapath-dp_buffers.o: udatapath/dp_buffers.c \
  oflib-exp/../oflib/ofl-structs.h oflib-exp/../oflib/ofl-messages.h \
  include/openflow/nicira-ext.h include/openflow/openflow.h \
  oflib-exp/ofl-exp-nicira.h udatapath/group_table.h \
- udatapath/group_entry.h lib/hmap.h oflib/ofl-actions.h \
- udatapath/packet_handle_std.h lib/packets.h lib/random.h \
- udatapath/match_std.h nbee_link/nbee_link.h lib/hmap.h lib/ofpbuf.h \
- lib/packets.h lib/vlog.h lib/vlog-modules.def \
+ udatapath/group_entry.h lib/hmap.h /usr/include/arpa/inet.h \
+ oflib/ofl-actions.h udatapath/packet_handle_std.h lib/packets.h \
+ lib/random.h udatapath/match_std.h nbee_link/nbee_link.h lib/hmap.h \
+ lib/ofpbuf.h lib/packets.h lib/vlog.h lib/vlog-modules.def \
  lib/../oflib/vlog-modules.def lib/../oflib-exp/vlog-modules.def \
  lib/../secchan/vlog-modules.def lib/../udatapath/vlog-modules.def \
  lib/../utilities/vlog-modules.def
@@ -344,6 +344,8 @@ udatapath/group_table.h:
 udatapath/group_entry.h:
 
 lib/hmap.h:
+
+/usr/include/arpa/inet.h:
 
 oflib/ofl-actions.h:
 

@@ -38,6 +38,8 @@
 #include "timeval.h"
 #include "list.h"
 
+#include <arpa/inet.h>
+
 
 struct rconn;
 struct pvconn;
@@ -203,5 +205,7 @@ dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
 
 /*Modificacion UAH*/
 uint32_t get_dp_local_port_number_UAH(struct datapath *dp);
+uint32_t dp_set_ip_addr(char * ip_aux);
+char * quitar_espacios(char * optarg);
 
 #endif /* datapath.h */
