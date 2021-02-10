@@ -821,6 +821,9 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
     int start_len = buf->size;
     int match_len;
 
+    /*Modificación UAH*/
+    struct oxm_field *f;
+    /*Fin Modificación*/
 
     /* We put all pre-requisites fields first */
     /* In port present */
@@ -866,7 +869,6 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
 
     /* Loop through the remaining fields */
     HMAP_FOR_EACH(oft, struct ofl_match_tlv, hmap_node, &omt->match_fields){
-
         if (is_requisite(oft->header))
             /*We already inserted  fields that are pre requisites to others */
              continue;
@@ -877,6 +879,14 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
                length = length / 2;
                has_mask = true;
             }
+            /*Modificación UAH*/
+            f = oxm_field_lookup(oft->header);
+            if( f->index >= OFI_OXM_OF_EHDDP_FLAGS)
+            {
+                VLOG_WARN_RL(LOG_MODULE, &rl, "Eliminams Mach propio.");
+                continue; //Elimino los campos propios del protocolo eHDDP
+            }
+            /*Fin*/
             switch (length){
                 case (sizeof(uint8_t)):{
                     uint8_t value;

@@ -105,8 +105,10 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
     struct flow_table *table, *next_table;
 
     if (pkt->handle_std->proto->eth->eth_type == htons(ETH_TYPE_EHDDP) || 
-        pkt->handle_std->proto->eth->eth_type == htons(ETH_TYPE_EHDDP_INV))
-         VLOG_INFO(LOG_MODULE, "nuestro puto paquete");
+        pkt->handle_std->proto->eth->eth_type == htons(ETH_TYPE_EHDDP_INV)){
+            VLOG_INFO(LOG_MODULE, "nuestro puto paquete");
+        }
+         
 
     if (VLOG_IS_DBG_ENABLED(LOG_MODULE)) {
         char *pkt_str = packet_to_string(pkt);
@@ -159,7 +161,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
 
         } else {
             /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-            //Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)
+            /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
             if (selecto_ehddp_packets(pkt) == 1 && pkt->dp->id != 1){
                 VLOG_INFO(LOG_MODULE, "Paquete eHDDP tratado Correctamente!");
                 //una vez tratado eliminamos el mensaje
@@ -681,7 +683,7 @@ uint8_t selecto_ehddp_packets(struct packet *pkt){
 
     //packet HDT (EthType = FFAA o AAFF)
     if( eth_type== 65450 || eth_type == 43775 ){
-        if ((SENSOR_TO_SENSOR == 1) || (SENSOR_TO_SENSOR == 0 && pkt->dp->id < 0x0100)){   
+        if ((SENSOR_TO_SENSOR == 1) || (SENSOR_TO_SENSOR == 0 && pkt->dp->id != 0x01)){   
             //paquetes broadcast son paquetes request
            // VLOG_INFO(LOG_MODULE, "Paquete ehddp detectado Opcode : %d", (int)pkt->handle_std->proto->ehddp->opcode);
             if (pkt->handle_std->proto->ehddp->opcode == 1){

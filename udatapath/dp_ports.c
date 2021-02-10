@@ -1535,11 +1535,7 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, 
 
             return 1;
         }
-        //Se envía al ofprotocol el nuevo puerto local
-        if (old_local_port == 0)
-            send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
-        return 0;
-
+        send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
     }
     return 1;
 }

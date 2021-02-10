@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "typeinfo": "c",
-        "cerrno": "c"
+        "cerrno": "c",
+        "*.def": "c"
     }
 }

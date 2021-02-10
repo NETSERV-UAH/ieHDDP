@@ -412,12 +412,13 @@ void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *i
     rconn_send(local_rconn, make_add_simple_flow(&local_mac_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
 }
 
-void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_local_port, struct in_addr *local_ip UNUSED, struct in_addr *controller_ip, uint8_t *mac, uint32_t *old_local_port)
+void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_local_port, struct in_addr *local_ip UNUSED, 
+    struct in_addr *controller_ip, uint8_t *mac, uint32_t *old_local_port)
 {
     uint32_t buffer_id = 0xffffffff;
-    struct flow tcp_mod_flow = {0}, del_drop = {0}, drop_mod_flow = {0};
+    struct flow tcp_mod_flow = {0}, drop_mod_flow = {0}, del_drop = {0};
 
-    // Se eliminan los flujos DROP para el antiguo puerto local (Basados en la MAC de la interfaz)
+    /* Se eliminan los flujos DROP para el antiguo puerto local (Basados en la MAC de la interfaz)*/
     memcpy(del_drop.dl_src, mac, ETH_ADDR_LEN);
     del_drop.in_port = htonl(*old_local_port);
     rconn_send(local_rconn, make_del_flow(&del_drop, 0x00), NULL);

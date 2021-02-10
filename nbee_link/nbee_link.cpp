@@ -317,26 +317,26 @@ int nblink_extract_proto_fields(struct ofpbuf * pktin, _nbPDMLField * field, str
             ofl_structs_match_put32(pktout, header, m_value);
         }
         /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-        else if(header == OXM_OF_EHDDP_FLAGS || header==OXM_OF_EHDDP_OPCODE || header == OXM_OF_EHDDP_NUM_DEVICE ||
-         header == OXM_OF_EHDDP_PRE_MAC_SIZ || header == OXM_OF_EHDDP_CONFIG)
+        else if(header == OXM_OF_EHDDP_FLAGS || header==OXM_OF_EHDDP_OPCODE || header == OXM_OF_EHDDP_NUM_DEVICE )
+            //|| header == OXM_OF_EHDDP_PRE_MAC_SIZ || header == OXM_OF_EHDDP_CONFIG)
         {
             uint8_t m_value =  *((uint8_t*)pktin->data + field->Position);
             m_value =  ntohs(m_value);
             ofl_structs_match_put8(pktout, header, m_value);
         }
-        else if(header==OXM_OF_EHDDP_TYPE_DEVICE)          
+        /*else if(header==OXM_OF_EHDDP_TYPE_DEVICE)          
         {
             uint16_t m_value =  *((uint16_t*)((uint8_t*)pktin->data + field->Position));
             m_value =  ntohs(m_value);
             ofl_structs_match_put16(pktout, header, m_value);
-        }
-        else if (header==OXM_OF_EHDDP_IN_PORTS || header==OXM_OF_EHDDP_OUT_PORTS ||header == OXM_OF_EHDDP_TIM_BLO) 
+        }*/
+        else if (header == OXM_OF_EHDDP_TIM_BLO ) //header==OXM_OF_EHDDP_IN_PORTS || header==OXM_OF_EHDDP_OUT_PORTS) 
         {
             uint32_t m_value =  *((uint32_t*)((uint8_t*)pktin->data + field->Position));
             m_value = htonl(m_value);
             ofl_structs_match_put32(pktout, header, m_value);
         }
-        else if(header==OXM_OF_EHDDP_IDS || header == OXM_OF_EHDDP_NUM_SEC || header == OXM_OF_EHDDP_NUM_ACK)
+        else if(header == OXM_OF_EHDDP_NUM_SEC || header == OXM_OF_EHDDP_NUM_ACK) // || header==OXM_OF_EHDDP_IDS)
         {
             uint64_t m_value =  *((uint64_t*)((uint8_t*)pktin->data + field->Position));
             m_value =  ntoh64(m_value);
@@ -544,7 +544,7 @@ extern "C" int nblink_packet_parse(struct ofpbuf * pktin,  struct ofl_match * pk
                 PDMLReader->GetPDMLField(proto->Name, (char*) "time_block", proto->FirstField, &field);
                 nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_TIM_BLO);
 
-                for (iter = 0; iter < num_devices; iter++){
+                /*for (iter = 0; iter < num_devices; iter++){
                     PDMLReader->GetPDMLField(proto->Name, (char*) "configurations", proto->FirstField, &field);
                     nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_CONFIG);
                     PDMLReader->GetPDMLField(proto->Name, (char*) "type_devices", proto->FirstField, &field);
@@ -555,7 +555,7 @@ extern "C" int nblink_packet_parse(struct ofpbuf * pktin,  struct ofl_match * pk
                     nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_IN_PORTS);
                     PDMLReader->GetPDMLField(proto->Name, (char*) "out_ports", proto->FirstField, &field);
                     nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_OUT_PORTS);
-                }
+                }*/
             }
             /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
             if (protocol_Name.compare("ip") == 0 && pkt_proto->ipv4 == NULL)
