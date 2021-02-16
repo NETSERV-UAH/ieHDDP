@@ -102,7 +102,6 @@ struct mac_port_time{
     struct mac_port_time *next;
     bool nuevo_puerto;
     uint64_t num_sec;
-    uint16_t type; //se usa para identificar el tipo de registro, por ejemplo tipo de sensor
 };
 
 struct mac_to_port{
@@ -113,8 +112,6 @@ struct mac_to_port{
 
 //matriz de vecinos
 struct mac_to_port bt_table;
-uint16_t type_sensor;
-uint8_t SENSOR_TO_SENSOR; // 0 = no se permite conexiones entre sensores; 1 = se permite conexiones entre sensores
 
 extern uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
 extern bool local_port_ok;
@@ -221,9 +218,9 @@ int num_port_available(struct datapath * dp);
 //se crea una nueva tabla mac_to_port en cada switch
 void mac_to_port_new(struct mac_to_port *mac_port);
 //add generic element
-int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time, uint64_t num_sec);
+int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t port_in, int time, uint64_t num_sec);
 //update element (time and port) 
-int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, uint16_t port_in, int time, uint64_t num_sec);
+int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t port_in, int time, uint64_t num_sec);
 //refresh time in table
 int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint64_t time, uint64_t num_sec);
 //found if is posible the out port of the mac
@@ -242,6 +239,8 @@ void log_uah(const void *Mensaje, int64_t id);
 struct in_addr remove_local_port_UAH(struct datapath *dp);
 int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, uint8_t *mac, uint32_t old_local_port);
 uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name);
+
+ofl_err dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no);
 /*Fin eHDDP*/
 
 #endif /* DP_PORTS_H */

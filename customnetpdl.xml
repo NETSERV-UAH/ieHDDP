@@ -527,15 +527,15 @@
 					<field type="variable" name="last_mac" longname="{0x8000 48} Last MAC" expr="buf2int(previous_size_mac)" showtemplate="MACaddressEth"/>
 					<field type="variable" name="src_mac" longname="{0x8000 47} Source MAC" expr="buf2int(previous_size_mac)" showtemplate="MACaddressEth"/>
 					<field type="fixed" name="time_block" longname="{0x8000 49} Time to block" size="4" showtemplate="FieldDec" />
-					<!--Leemos parte variable 
-					<loop type="times2repeat" expr="buf2int(num_devices)">
+					<!--Leemos parte variable -->
+					<loop type="times2repeat" expr="buf2int(num_devices)">-->
 						
 						<field type="fixed" name="configurations" longname="{0x8000 50}" size="1" showtemplate="FieldDec" />
 						<field type="fixed" name="type_devices" longname="{0x8000 51} type_devices" size="2" showtemplate="FieldDec"/>
 						<field type="fixed" name="ids" longname="{0x8000 52} id" size="8" showtemplate="FieldDec" /> 
 						<field type="fixed" name="in_ports" longname="{0x8000 53} in_ports" size="4" showtemplate="FieldDec"/>
 						<field type="fixed" name="out_ports" longname="{0x8000 54} out_ports" size="4" showtemplate="FieldDec"/>
-					</loop>  -->
+					</loop>
                 </fields>
         </format>
 </protocol>

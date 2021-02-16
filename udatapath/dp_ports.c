@@ -742,6 +742,27 @@ dp_ports_handle_port_mod(struct datapath *dp, struct ofl_msg_port_mod *msg,
     return 0;
 }
 
+ofl_err
+dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no) {
+
+    struct sw_port *p;
+    struct ofl_msg_port_status rep_msg;
+
+
+    p = dp_ports_lookup(dp, port_no);
+
+    if (p == NULL) {
+        return ofl_error(OFPET_PORT_MOD_FAILED,OFPPMFC_BAD_PORT);
+    }
+
+    /*Notify all controllers that the port status has changed*/
+    rep_msg.header.type = OFPT_PORT_STATUS;
+    rep_msg.reason =   OFPPR_MODIFY;
+    rep_msg.desc = p->conf;      
+    dp_send_message(dp, (struct ofl_msg_header *)&rep_msg, NULL/*sender*/);
+    return 0;
+}
+
 static void
 dp_port_stats_update(struct sw_port *port) {
     port->stats->duration_sec  =  (time_msec() - port->created) / 1000;
@@ -1194,8 +1215,7 @@ void mac_to_port_new(struct mac_to_port *mac_port)
     mac_port->num_element = 0;
 }
 
-int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, 
-    uint16_t port_in, int time, uint64_t num_sec)
+int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t port_in, int time, uint64_t num_sec)
 {
     struct mac_port_time *nuevo_elemento = NULL;
     struct mac_port_time *actual = mac_port->fin;
@@ -1207,7 +1227,6 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
     //guardamos el momento en que la entrada deja de ser valida
     nuevo_elemento->valid_time_entry = time_msec() + time;
     memcpy(nuevo_elemento->Mac, Mac, ETH_ADDR_LEN);
-    nuevo_elemento->type = type;
     nuevo_elemento->nuevo_puerto = true;
     nuevo_elemento->num_sec = num_sec;
     nuevo_elemento->next = NULL;
@@ -1223,8 +1242,7 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
 }
 
 //update element
-int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t type, 
-    uint16_t port_in, int time, uint64_t num_sec) 
+int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uint16_t port_in, int time, uint64_t num_sec) 
 {
     struct mac_port_time *aux = mac_port->inicio;
     
@@ -1239,7 +1257,6 @@ int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], 
                 else
                     aux->nuevo_puerto = false; 
                 aux->port_in = port_in;
-                aux->type = type;
                 aux->num_sec = num_sec;
                 //miramos cual si el tiempo guardado + la actualizacion
                 if (time_msec() + time >= aux->valid_time_entry)
@@ -1315,7 +1332,7 @@ int mac_to_port_found_mac_position(struct mac_to_port *mac_port, uint64_t positi
                 if (marca_tiempo_msec <= aux->valid_time_entry){
                     VLOG_INFO(LOG_MODULE, "MAC encontrada en posicion localizada devolvemos 1");
                     memcpy(Mac, aux->Mac, ETH_ADDR_LEN);
-                    return aux->type; //devolvemos el tipo de elemento
+                    return pos;
                 }
                 else 
                 {
@@ -1398,9 +1415,9 @@ int num_port_available(struct datapath * dp){
     for (i = 1; i<(int)dp->ports_num; i++){
         if (dp->ports[i].conf->state & OFPPS_LINK_DOWN)
             num_port_inactivos++;
-        else
-            VLOG_INFO(LOG_MODULE, "El puerto %d esta activo(OFPPS_LINK_DOWN == %lu): %lu", 
-                i,(long unsigned int)OFPPS_LINK_DOWN, (long unsigned int)dp->ports[i].conf->state);
+        //else
+        //    VLOG_INFO(LOG_MODULE, "El puerto %d esta activo(OFPPS_LINK_DOWN == %lu): %lu", 
+        //        i,(long unsigned int)OFPPS_LINK_DOWN, (long unsigned int)dp->ports[i].conf->state);
     } 
     /** Le restamos uno ya que el puerto del controller tampoco cuenta con habilitado */
     return ((int)dp->ports_num - num_port_inactivos - 1);
@@ -1413,7 +1430,7 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 	struct mac_port_time *aux = mac_port->inicio;
 	int i=0,j=0;
 
-	sprintf(mac_tabla, "DpID: %d \npos|      Mac        |Puerto IN|Time|Type\n", (int)id_datapath);
+	sprintf(mac_tabla, "DpID: %d \npos|      Mac        |Puerto IN|Time\n", (int)id_datapath);
 	sprintf(mac_tabla + strlen(mac_tabla),"----------------------------------------------\n");
 	while(aux != NULL)
 	{
@@ -1437,10 +1454,7 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 			if (aux->valid_time_entry > time_msec())
 				sprintf(mac_tabla + strlen(mac_tabla),"%.3f |",((float)(aux->valid_time_entry - time_msec()))/1000);
 			else
-				sprintf(mac_tabla + strlen(mac_tabla),"Caducada |");
-			
-			//comprobamos el vecino
-			sprintf(mac_tabla + strlen(mac_tabla),"%d\n",aux->type);
+				sprintf(mac_tabla + strlen(mac_tabla),"Caducada");
 		}
 		i++;
 		aux = aux->next;
@@ -1523,7 +1537,7 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, 
         error = dp_ports_add_local(dp, p->conf->name);
         inet_pton(AF_INET, "255.255.255.0", &(mask.s_addr));
         inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
-        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Antiguo puerto local (%u)\tNuevo puerto local %s(%u)", old_local_port, 
+        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Antiguo puerto local (%u)\tNuevo puerto local %s (%u)", old_local_port, 
             p->conf->name, p->conf->port_no);
         VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s (mask: %s)", ip_aux, "255.255.255.0");
         netdev_set_in4(dp->local_port->netdev, local_ip, mask); //Se configura la ip del nuevo puerto local

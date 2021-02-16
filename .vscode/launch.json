@@ -11,13 +11,12 @@
             "program": "${workspaceFolder}/udatapath/ofdatapath",
             "args": [
                 "-i",
-                "veth-s21,veth-s24,veth-h1",
-                "punix:/tmp/s2",
+                "veth-s41,veth-s42,veth-s43,veth-h3",
+                "punix:/tmp/s4",
                 "-d",
-                "000000000002",
+                "000000000004",
                 "--no-slicing",
-                "--no-local-port",
-                "-I 10.0.0.102"
+                "-I 10.0.0.104"
                 /*"-i",
                 "veth-s1,veth-s12,veth-s13",
                 "punix:/tmp/s1",

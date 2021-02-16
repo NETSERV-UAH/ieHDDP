@@ -1233,12 +1233,6 @@ int netdev_send(struct netdev *netdev, const struct ofpbuf *buffer,
 
     assert(class_id <= NETDEV_MAX_QUEUES);
 
-    if(netdev->mtu < buffer->size)
-    {
-        VLOG_WARN_RL(LOG_MODULE, &rl, "Ojo problemas de tamaño %d -> %lu", netdev->mtu, buffer->size);
-        return -1;
-    }
-
     do
     {
         n_bytes = write(netdev->queue_fd[class_id], buffer->data, buffer->size);

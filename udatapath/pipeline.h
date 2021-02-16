@@ -39,8 +39,6 @@ struct sender;
 extern struct mac_to_port neighbor_table, bt_table;
 extern bool local_port_ok;
 
-//tiempo de vida del sensor 1.5 segundos]
-#define TIME_HELLO_SENSOR 1.5 
 //tiempo de vida del controlador en la tabla de controladores debe ser mas 
 //pequeño que el tiempo entre refresco del controlador
 #define BT_TIME 20
@@ -48,7 +46,6 @@ extern bool local_port_ok;
 //Tipos de dispositivos 
 #define NODO_SDN 1
 #define NODO_NO_SDN 2
-#define NODO_SENSOR 3
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 

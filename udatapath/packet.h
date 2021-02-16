@@ -72,8 +72,6 @@ packet_clone(struct packet *pkt);
 //Tipos de dispositivos 
 #define NODO_SDN 1
 #define NODO_NO_SDN 2
-#define NODO_SENSOR 3
-extern uint16_t type_sensor;
 
 //funciones para crear paquete de Discovery hybrid topologies
 struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst,

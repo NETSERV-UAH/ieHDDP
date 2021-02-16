@@ -148,7 +148,8 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
     uint8_t opcode = 0x02, flag_and_ersion = 0x01, num_device = num_devices, previous_size_mac = 0x06, configurations = 0b01111111;
     uint16_t etherType = bigtolittle16(ETH_TYPE_EHDDP), type_devices = htons(type_device);
     uint8_t * device_mac = NULL;
-    uint32_t out_ports = htonl(out_port), in_ports = htonl(in_port);
+    uint32_t out_ports = htonl(out_port), in_ports = htonl(in_port); 
+    uint64_t id_sdn = bigtolittle64(dp->id);
  
     device_mac = malloc(sizeof(uint8_t)*ETH_ADDR_LEN);
     int2mac(mac_device_64, device_mac);
@@ -175,7 +176,11 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 
     ofpbuf_put(buffer2,&configurations, sizeof(uint8_t));
     ofpbuf_put(buffer2,&type_devices, sizeof(uint16_t));
-    ofpbuf_put(buffer2,&mac_device_64, sizeof(uint64_t));
+    if (type_device == NODO_NO_SDN)
+        ofpbuf_put(buffer2,&mac_device_64, sizeof(uint64_t));
+    else //si ya soy un nodo SDN -> tengo puerto local pongo mi id
+        ofpbuf_put(buffer2,&id_sdn, sizeof(uint64_t));
+
     ofpbuf_put(buffer2,&in_ports, sizeof(uint32_t));
     ofpbuf_put(buffer2,&out_ports, sizeof(uint32_t));
 
@@ -202,11 +207,11 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
     memcpy(&pkt->handle_std->proto->ehddp->src_mac, device_mac, sizeof(uint8_t)*ETH_ADDR_LEN);
     pkt->handle_std->proto->ehddp->time_block = time_block;
 
-    /*pkt->handle_std->proto->ehddp->configurations[0] = configurations;
+    pkt->handle_std->proto->ehddp->configurations[0] = configurations;
     pkt->handle_std->proto->ehddp->type_devices[0] = type_devices;
     pkt->handle_std->proto->ehddp->ids[0] = mac_device_64;
     pkt->handle_std->proto->ehddp->in_ports[0] = in_ports;
-    pkt->handle_std->proto->ehddp->out_ports[0] = out_ports;*/
+    pkt->handle_std->proto->ehddp->out_ports[0] = out_ports;
    
     //validamos el paquete
     packet_handle_std_validate(pkt->handle_std);
@@ -217,12 +222,12 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
     uint8_t configuration = 0b01111111;
     uint16_t type_device = 0, num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
     uint32_t in_port = htonl(pkt->in_port), out_port_update=0;
-    uint64_t mac_64 = bigtolittle64(mac2int(pkt->dp->ports[1].conf->hw_addr));
+    uint64_t mac_64 = bigtolittle64(mac2int(pkt->dp->ports[1].conf->hw_addr)), id_sdn = bigtolittle64(pkt->dp->id);
 
-    if (pkt->dp->id >= 0x1000 ){ /** Soy un sensor indico que sensor soy */
-        type_device = htons(type_sensor);
+    if (pkt->dp->local_port != NULL ){ /** Soy un nodo SDN*/
+        type_device = htons(NODO_SDN);
     }
-    else /** Como no soy un sensor, soy un NO SDN */
+    else /** soy un NO SDN */
     {
         type_device = htons(NODO_NO_SDN); 
     } 
@@ -238,7 +243,10 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
         /*Introducimos el valor del campo en el paquete */
     ofpbuf_put(pkt->buffer,&configuration, sizeof(uint8_t));
     ofpbuf_put(pkt->buffer,&type_device, sizeof(uint16_t));
-    ofpbuf_put(pkt->buffer,&mac_64, sizeof(uint64_t));
+    if (pkt->dp->local_port != NULL )
+        ofpbuf_put(pkt->buffer,&id_sdn, sizeof(uint64_t));
+    else
+        ofpbuf_put(pkt->buffer,&mac_64, sizeof(uint64_t));
     ofpbuf_put(pkt->buffer,&in_port, sizeof(uint32_t));
     ofpbuf_put(pkt->buffer,&out_port_update, sizeof(uint32_t));
 
@@ -273,7 +281,7 @@ struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32
     //lo rellenamos con la broadcast
     ofpbuf_put(buf, MAC_BC, ETH_ADDR_LEN);
     //lo rellenamos con la mac broadcast //Puro trámite
-    ofpbuf_put(buf, MAC_BC, ETH_ADDR_LEN);
+    ofpbuf_put(buf, mac, ETH_ADDR_LEN);
     //le metemos el eth Type
     ofpbuf_put(buf, &type_array, sizeof(uint16_t));
 

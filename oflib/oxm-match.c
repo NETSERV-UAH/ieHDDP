@@ -512,31 +512,31 @@ parse_oxm_entry(struct ofl_match *match, const struct oxm_field *f,
         case OFI_OXM_OF_EHDDP_NUM_DEVICE:
         case OFI_OXM_OF_EHDDP_PRE_MAC_SIZ:
         case OFI_OXM_OF_EHDDP_CONFIG:
-            ofl_structs_match_put8(match,f->header,ntohs(*((uint8_t*) value)));
+            //ofl_structs_match_put8(match,f->header,ntohs(*((uint8_t*) value)));
             return 0;
         
         case OFI_OXM_OF_EHDDP_TYPE_DEVICE:
-            ofl_structs_match_put16(match,f->header,ntohs(*((uint16_t*) value)));
+            //ofl_structs_match_put16(match,f->header,ntohs(*((uint16_t*) value)));
             return 0;
 
         case OFI_OXM_OF_EHDDP_PRE_MAC:        
         case OFI_OXM_OF_EHDDP_LAS_MAC:
         case OFI_OXM_OF_EHDDP_SRC_MAC:
-            ofl_structs_match_put_64_as_a_mac(match, f->header, ntohs(*((uint64_t*) value)));
+            //ofl_structs_match_put_64_as_a_mac(match, f->header, ntohs(*((uint64_t*) value)));
             return 0;
 
         case OFI_OXM_OF_EHDDP_NUM_SEC:
         case OFI_OXM_OF_EHDDP_NUM_ACK:
         case OFI_OXM_OF_EHDDP_IDS:
-            ofl_structs_match_put64(match, f->header, ntoh64(*((uint64_t*) value)));
+            //ofl_structs_match_put64(match, f->header, ntoh64(*((uint64_t*) value)));
             return 0;
  
         case OFI_OXM_OF_EHDDP_TIM_BLO:
         case OFI_OXM_OF_EHDDP_IN_PORTS:
         case OFI_OXM_OF_EHDDP_OUT_PORTS:
-            ofl_structs_match_put32(match, f->header, ntohl(*((uint32_t*) value)));
+            //ofl_structs_match_put32(match, f->header, ntohl(*((uint32_t*) value)));
             return 0;
-        /* Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
+        /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
         case NUM_OXM_FIELDS:
             NOT_REACHED();
     }
@@ -804,6 +804,18 @@ oxm_put_eth_dst(struct ofpbuf *b,
     }
 }*/
 
+inline bool is_ehddp(uint32_t header){
+    if (header == OFPXMT_OFB_EHDDP_FLAGS || header == OFPXMT_OFB_EHDDP_OPCODE || header == OFPXMT_OFB_EHDDP_NUM_DEVICE ||
+    header == OFPXMT_OFB_EHDDP_NUM_SEC || header == OFPXMT_OFB_EHDDP_PRE_MAC_SIZ || header == OFPXMT_OFB_EHDDP_PRE_MAC ||
+    header == OFPXMT_OFB_EHDDP_NUM_ACK || header == OFPXMT_OFB_EHDDP_SRC_MAC || header == OFPXMT_OFB_EHDDP_LAS_MAC ||
+    header == OFPXMT_OFB_EHDDP_TIM_BLO || header == OFPXMT_OFB_EHDDP_CONFIG || header == OFPXMT_OFB_EHDDP_TYPE_DEVICE ||
+    header == OFPXMT_OFB_EHDDP_IDS || header == OFPXMT_OFB_EHDDP_IN_PORTS || header == OFPXMT_OFB_EHDDP_OUT_PORTS) 
+    {   
+        return true;
+    }
+    return false;
+}
+
 static bool
 is_requisite(uint32_t header){
     if(header == OXM_OF_IN_PORT || header == OXM_OF_ETH_TYPE
@@ -811,6 +823,7 @@ is_requisite(uint32_t header){
         header == OXM_OF_ICMPV6_TYPE) {
         return true;
     }
+    
     return false;
 }
 
@@ -822,7 +835,7 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
     int match_len;
 
     /*Modificación UAH*/
-    struct oxm_field *f;
+    //struct oxm_field *f;
     /*Fin Modificación*/
 
     /* We put all pre-requisites fields first */
@@ -869,9 +882,19 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
 
     /* Loop through the remaining fields */
     HMAP_FOR_EACH(oft, struct ofl_match_tlv, hmap_node, &omt->match_fields){
+        //f = oxm_field_lookup(oft->header);
         if (is_requisite(oft->header))
             /*We already inserted  fields that are pre requisites to others */
              continue;
+        /*Modificación UAH*/
+        /*   
+        else if (is_ehddp(f->index))
+        {
+            VLOG_WARN_RL(LOG_MODULE, &rl, "Este mach es propio no deberia salir.");
+            continue; //Elimino los campos propios del protocolo eHDDP
+        }
+        */
+        /*Fin*/
         else {
             uint8_t length = OXM_LENGTH(oft->header) ;
             bool has_mask =false;
@@ -879,14 +902,7 @@ int oxm_put_match(struct ofpbuf *buf, struct ofl_match *omt){
                length = length / 2;
                has_mask = true;
             }
-            /*Modificación UAH*/
-            f = oxm_field_lookup(oft->header);
-            if( f->index >= OFI_OXM_OF_EHDDP_FLAGS)
-            {
-                VLOG_WARN_RL(LOG_MODULE, &rl, "Eliminams Mach propio.");
-                continue; //Elimino los campos propios del protocolo eHDDP
-            }
-            /*Fin*/
+
             switch (length){
                 case (sizeof(uint8_t)):{
                     uint8_t value;

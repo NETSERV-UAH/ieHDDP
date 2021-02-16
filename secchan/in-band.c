@@ -238,12 +238,12 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
             /* If the switch didn't buffer the packet, we need to send a copy. */
             if (ntohl(oflpi->buffer_id) == UINT32_MAX)
             {
-                VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: PACKET_OUT OUT_PORT %u", out_port);
+                VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ARP]: PACKET_OUT OUT_PORT %u", out_port);
                 queue_tx(rc, in_band, make_unbuffered_packet_out(payload, in_port, out_port));
             }
             else
             {
-                VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
+                VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ARP]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
                 queue_tx(rc, in_band, make_buffered_packet_out(oflpi->buffer_id, in_port, out_port));
             }
         }
@@ -276,12 +276,12 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         /* If the switch didn't buffer the packet, we need to send a copy. */
         if (ntohl(oflpi->buffer_id) == UINT32_MAX)
         {
-            VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: PACKET_OUT OUT_PORT %u", out_port);
+            VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ETH_TYPE_IP]: PACKET_OUT OUT_PORT %u", out_port);
             queue_tx(rc, in_band, make_unbuffered_packet_out(payload, in_port, out_port));
         }
         else
         {
-            VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
+            VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ETH_TYPE_IP]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
             queue_tx(rc, in_band, make_buffered_packet_out(oflpi->buffer_id, in_port, out_port));
         }
     }
@@ -419,14 +419,16 @@ void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_lo
     struct flow tcp_mod_flow = {0}, drop_mod_flow = {0}, del_drop = {0};
 
     /* Se eliminan los flujos DROP para el antiguo puerto local (Basados en la MAC de la interfaz)*/
-    memcpy(del_drop.dl_src, mac, ETH_ADDR_LEN);
-    del_drop.in_port = htonl(*old_local_port);
-    rconn_send(local_rconn, make_del_flow(&del_drop, 0x00), NULL);
+    if (*old_local_port != 0) { /*JAH*/
+        memcpy(del_drop.dl_src, mac, ETH_ADDR_LEN);
+        del_drop.in_port = htonl(*old_local_port);
+        rconn_send(local_rconn, make_del_flow(&del_drop, 0x00), NULL);
 
-    memset(del_drop.dl_src, 0, ETH_ADDR_LEN);
-    memcpy(del_drop.dl_dst, mac, ETH_ADDR_LEN);
-    rconn_send(local_rconn, make_del_flow(&del_drop, 0x00), NULL);
-
+        memset(del_drop.dl_src, 0, ETH_ADDR_LEN);
+        memcpy(del_drop.dl_dst, mac, ETH_ADDR_LEN);
+        rconn_send(local_rconn, make_del_flow(&del_drop, 0x00), NULL);
+    }
+    
     // DROP con origen/destino la MAC de la interfaz del puerto local teniendo en cuenta el nuevo puerto local
     drop_mod_flow.in_port = htonl(*new_local_port);
     memcpy(drop_mod_flow.dl_src, mac, ETH_ADDR_LEN);

@@ -50,10 +50,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define TIME_SEND 1 // enviamos cada segundo para mayor precision en los sensores
-#define TIME_DELETE_NG 1.5 //tiempo de borrado de tabla de vecinos
 #define TIME_DELETE_BT 5 //tiempo de borrado de tabla de vecinos
-#define NUMERO_TIPO_SENSORES 13 //numero de tipos de sensores distintos
 
 /* FIn Modificacion UAH Discovery hybrid topologies, JAH- */
 
@@ -74,8 +71,6 @@ static bool use_multiple_connections = false;
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 extern struct packet *pkt_hello;
 extern struct mac_to_port bt_table;
-extern uint16_t type_sensor;
-extern uint8_t SENSOR_TO_SENSOR;
 
 uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
 bool local_port_ok = false;
@@ -110,8 +105,6 @@ udatapath_cmd(int argc, char *argv[])
     int i;
     /*Modificacion UAH eHDDP, JAH-*/
     uint64_t deletetimeBT = 0, time_init_uah = 0;
-    /** Cambiamos de modo 0 (sin conexiones entre sensores) o modo 1 (con conexion entre sensores) */
-    SENSOR_TO_SENSOR = 1 ; 
     /*Fin Modificacion eHDDP, JAH-*/
 
     set_program_name(argv[0]);
@@ -180,14 +173,6 @@ udatapath_cmd(int argc, char *argv[])
     die_if_already_running();
     daemonize();
 
-    /*Modificacion UAH eHDDP, JAH-*/
-    if (dp->id >= 0x1000) //establecemis el tipo de sensor que somos
-    {
-        VLOG_INFO(THIS_MODULE,"Somos un sensor con ID: %lu", dp->id);
-        type_sensor = (int)(rand() % NUMERO_TIPO_SENSORES)+3;   
-    }
-    
-
     if (get_dp_local_port_number_UAH(dp)) 
     {
         //iniciamos el temporaizados
@@ -205,7 +190,6 @@ udatapath_cmd(int argc, char *argv[])
         if((time_msec() - deletetimeBT >= TIME_DELETE_BT*1000) && dp->id != 1)
         {
             VLOG_INFO(THIS_MODULE,"Borramos los bloqueos antiguos");
-            //Borramos tabla de vecinos para permitir movilidad de sensores
             mac_to_port_delete_timeout(&bt_table);
             deletetimeBT = time_msec();
         }
