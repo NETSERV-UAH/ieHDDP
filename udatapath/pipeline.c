@@ -116,6 +116,10 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
         return;
     }
 
+    /*Modificacion UAH Discovery hybrid topologies, JAH-*/
+    /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
+    select_ehddp_packets(pkt);
+
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
     next_table = pl->tables[0];
     while (next_table != NULL) {
@@ -155,18 +159,6 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
             }
 
         } else {
-            /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-            /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
-            if (selecto_ehddp_packets(pkt) == 1 && pkt->dp->id != 1){
-                VLOG_INFO(LOG_MODULE, "Paquete eHDDP tratado Correctamente!");
-                //una vez tratado eliminamos el mensaje
-                /*if (!pkt)
-                {
-                    //packet_destroy(pkt);
-                    VLOG_INFO(LOG_MODULE, "Paquete eHDDP Eliminado de forma incorrecta!");
-                    return;
-                }*/
-            }
             /* OpenFlow 1.3 default behavior on a table miss */
 			VLOG_DBG_RL(LOG_MODULE, &rl, "No matching entry found. Dropping packet.");
 			packet_destroy(pkt);
@@ -671,34 +663,30 @@ static inline uint64_t hton642(uint64_t n) {
 }
 
 
-uint8_t selecto_ehddp_packets(struct packet *pkt){
+uint8_t select_ehddp_packets(struct packet *pkt){
     uint16_t  eth_type = pkt->handle_std->proto->eth->eth_type;
 
     //packet HDT (EthType = FFAA o AAFF)
-    if( eth_type== 65450 || eth_type == 43775){
-        if (pkt->dp->id != 0x01){   
-            //paquetes broadcast son paquetes request
-           // VLOG_INFO(LOG_MODULE, "Paquete ehddp detectado Opcode : %d", (int)pkt->handle_std->proto->ehddp->opcode);
-            if (pkt->handle_std->proto->ehddp->opcode == 1){
-                VLOG_INFO(LOG_MODULE, "Paquete ehddp REQUEST detectado");
-                handle_ehddp_request_packets(pkt);
-            }//paquetes unicast son paquetes reply
-            else if (pkt->handle_std->proto->ehddp->opcode == 2){
-                VLOG_INFO(LOG_MODULE, "Paquete ehddp REPLY detectado");
-                handle_ehddp_reply_packets(pkt);
-            }
-            else if (pkt->handle_std->proto->ehddp->opcode == 3){
-                VLOG_INFO(LOG_MODULE, "Paquete ehddp ACK detectado No nos interesa para redes ethernet");
-            }
-            else{
-                VLOG_INFO(LOG_MODULE, "Paquete ehddp DEFECTUOSO!!!");
-            }
+    if( (eth_type== ETH_TYPE_EHDDP || eth_type == ETH_TYPE_EHDDP_INV) && pkt->dp->id > 1){
+        //paquetes broadcast son paquetes request
+        // VLOG_INFO(LOG_MODULE, "Paquete ehddp detectado Opcode : %d", (int)pkt->handle_std->proto->ehddp->opcode);
+        if (pkt->handle_std->proto->ehddp->opcode == 1){
+            VLOG_INFO(LOG_MODULE, "Paquete ehddp REQUEST detectado");
+            handle_ehddp_request_packets(pkt);
+        }//paquetes unicast son paquetes reply
+        else if (pkt->handle_std->proto->ehddp->opcode == 2){
+            VLOG_INFO(LOG_MODULE, "Paquete ehddp REPLY detectado");
+            handle_ehddp_reply_packets(pkt);
         }
-        //el paquete se ha tratado como un eHDDP
-        return 1;
+        else if (pkt->handle_std->proto->ehddp->opcode == 3){
+            VLOG_INFO(LOG_MODULE, "Paquete ehddp ACK detectado No nos interesa para redes ethernet");
+        }
+        else{
+            VLOG_INFO(LOG_MODULE, "Paquete ehddp DEFECTUOSO!!!");
+        }
     }
     //el paquete no es un eHDDP se debe tratar por otro lado
-    return 0;
+    return 1;
 }
 
 uint8_t handle_ehddp_request_packets(struct packet *pkt){
@@ -736,14 +724,14 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt){
         modificar_local_port = 0;
         resend_request = 1;
     }
-    else if (table_port == pkt->in_port){ //Puerto encontrado y valido, comparamos con el de entrada
+    /*else if (table_port == pkt->in_port){ //Puerto encontrado y valido, comparamos con el de entrada
         VLOG_INFO(LOG_MODULE, "actualizo el tiempo de la entrada de tabla BT");
         mac_to_port_time_refresh(&bt_table, pkt->handle_std->proto->eth->eth_src, htonl(pkt->handle_std->proto->ehddp->time_block),
             pkt->handle_std->proto->ehddp->num_sec);
         response_reply = 0;
         modificar_local_port = 0;
         resend_request = 0;
-    } 
+    } */
     else
     {
         /* contestamos con reply */
@@ -788,6 +776,7 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt){
                                     free(pkt->dp->local_port);
                             }
                             local_port_ok = false;
+                            time_init_local_port = 0;
                         } 
                     }
                     break;
@@ -799,6 +788,7 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt){
                     error = configure_new_local_port_ehddp_UAH(pkt->dp, &ip_in_band, mac, 0);
                     /*Ahora hacemos que el ofprotocol se entere*/
                     //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
+                    time_init_local_port = 0;
                     local_port_ok = false;
                 }
                 break;
@@ -809,22 +799,17 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt){
     }
     
     /* Si solo tengo un puerto contesto con reply */
-    if (num_ports == 1 || response_reply == 1){
+    if (num_ports == 1 || (response_reply == 1 && resend_request == 0)){
         VLOG_INFO(LOG_MODULE, "Entramos en generar el reply: num_ports: %d | response_reply: %d", num_ports, response_reply);
-        VLOG_INFO(LOG_MODULE, "Request detectado pasamos a crear los Replys de contestacion");
-        log_uah("Envio Replies:\n", pkt->dp->id);
         //visualizar_tabla(&bt_table, pkt->dp->id);
         creator_ehddp_reply_packets(pkt);
-        VLOG_INFO(LOG_MODULE, "Replies enviado pasamos eliminar el Request");
     }
     //actualizo el numero de dispositivos por los que pasa el request, solo si tengo puertos
     //disponibles para reenviar el paquete
-    else if( resend_request == 1) 
+    else if(resend_request == 1) 
     {
-        //update_data_request(pkt);
         update_data_msg(pkt, (uint32_t) OFPP_FLOOD, pkt->handle_std->proto->ehddp->nxt_mac);
         VLOG_INFO(LOG_MODULE,"Update number of jump: %d ", pkt->handle_std->proto->ehddp->num_devices);
-        log_uah("Envio Request:\n", pkt->dp->id);
         //visualizar_tabla(&bt_table, pkt->dp->id);
         dp_actions_output_port(pkt, OFPP_FLOOD, pkt->out_queue, pkt->out_port_max_len, 0xffffffffffffffff);
     }
@@ -855,12 +840,12 @@ uint8_t handle_ehddp_reply_packets(struct packet *pkt){
         VLOG_INFO(LOG_MODULE, "Update the eHDDP reply packet: in-port: %d | out-port %d | type_device: %d",
             pkt->in_port, out_port, type_device);
 
-        if (pkt->in_port == out_port){
+        /*Si que puede pasar que me llegue un reply por el puerto de salida ya que puedo estar conectado a otro SDN */
+        /*if (pkt->in_port == out_port){
             VLOG_INFO(LOG_MODULE, "ERROR!!! El puerto de entrada y salida no pueden ser iguales para un paquete unicast");
-            log_uah("ERROR!!! El puerto de entrada y salida no pueden ser iguales para un paquete unicast\n",pkt->dp->id);
-            //visualizar_tabla(&bt_table, pkt->dp->id);
+            visualizar_tabla(&bt_table, pkt->dp->id);
             return 0;
-        }
+        }*/
 
         if (mac_to_port_found_mac_position(&bt_table, 1, nxt_mac) < 0) //obtenemos la mac del controller
         {
@@ -899,7 +884,7 @@ void creator_ehddp_reply_packets(struct packet *pkt){
     }
 
     pkt_reply = create_ehddp_reply_packet(pkt->dp, pkt->handle_std->proto->eth->eth_src,pkt->in_port,
-        pkt->in_port, type_device, mac2int(pkt->dp->ports[1].conf->hw_addr), num_devices,
+        pkt->in_port, type_device, num_devices,
         pkt->handle_std->proto->ehddp->num_sec, pkt->handle_std->proto->ehddp->num_ack, pkt->handle_std->proto->ehddp->time_block);
     VLOG_INFO(LOG_MODULE, "create_ehddp_reply_packet OK");
     //envio el paquete por el puerto de entrada

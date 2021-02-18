@@ -130,7 +130,7 @@ packet_to_string(struct packet *pkt) {
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst,
-    uint32_t in_port, uint32_t out_port, uint16_t type_device, uint64_t mac_device_64, uint8_t num_devices,
+    uint32_t in_port, uint32_t out_port, uint16_t type_device, uint8_t num_devices,
     u_int64_t num_sec, u_int64_t num_ack, u_int32_t time_block)
 {
     /*                                 Estructura del paquete
@@ -147,19 +147,18 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
     
     uint8_t opcode = 0x02, flag_and_ersion = 0x01, num_device = num_devices, previous_size_mac = 0x06, configurations = 0b01111111;
     uint16_t etherType = bigtolittle16(ETH_TYPE_EHDDP), type_devices = htons(type_device);
-    uint8_t * device_mac = NULL;
+    uint8_t device_mac[ETH_ADDR_LEN];
     uint32_t out_ports = htonl(out_port), in_ports = htonl(in_port); 
     uint64_t id_sdn = bigtolittle64(dp->id);
  
-    device_mac = malloc(sizeof(uint8_t)*ETH_ADDR_LEN);
-    int2mac(mac_device_64, device_mac);
-    mac_device_64 = bigtolittle64(mac_device_64);
+    //int2mac(mac_device_64, device_mac);
+    eth_addr_from_uint64(dp->id, device_mac);
     time_block = time_block;
 
     //Now, create the packet and add the Ethernet header
     buffer2= ofpbuf_new( sizeof(struct eth_header) + sizeof(struct ehddp_header));
     ofpbuf_put(buffer2, mac_dst, ETH_ADDR_LEN); 
-    ofpbuf_put(buffer2, dp->ports[1].conf->hw_addr, ETH_ADDR_LEN);
+    ofpbuf_put(buffer2, device_mac, ETH_ADDR_LEN);
     ofpbuf_put(buffer2, &etherType, sizeof(uint16_t));
     
     //Now, create the HDP header
@@ -176,10 +175,7 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 
     ofpbuf_put(buffer2,&configurations, sizeof(uint8_t));
     ofpbuf_put(buffer2,&type_devices, sizeof(uint16_t));
-    if (type_device == NODO_NO_SDN)
-        ofpbuf_put(buffer2,&mac_device_64, sizeof(uint64_t));
-    else //si ya soy un nodo SDN -> tengo puerto local pongo mi id
-        ofpbuf_put(buffer2,&id_sdn, sizeof(uint64_t));
+    ofpbuf_put(buffer2,&id_sdn, sizeof(uint64_t));
 
     ofpbuf_put(buffer2,&in_ports, sizeof(uint32_t));
     ofpbuf_put(buffer2,&out_ports, sizeof(uint32_t));
@@ -190,7 +186,7 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
     //Creamos la cabecera ethernet
     pkt->handle_std->proto->eth = xmalloc(sizeof(struct eth_header));
     memcpy(pkt->handle_std->proto->eth->eth_dst, mac_dst, ETH_ADDR_LEN);
-    memcpy(pkt->handle_std->proto->eth->eth_src, dp->ports[1].conf->hw_addr, ETH_ADDR_LEN);
+    memcpy(pkt->handle_std->proto->eth->eth_src, device_mac, ETH_ADDR_LEN);
     //Insertamos el eth al reves por tema de little endian
     pkt->handle_std->proto->eth->eth_type=ETH_TYPE_EHDDP_INV;
 
@@ -209,7 +205,7 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 
     pkt->handle_std->proto->ehddp->configurations[0] = configurations;
     pkt->handle_std->proto->ehddp->type_devices[0] = type_devices;
-    pkt->handle_std->proto->ehddp->ids[0] = mac_device_64;
+    pkt->handle_std->proto->ehddp->ids[0] = dp->id;
     pkt->handle_std->proto->ehddp->in_ports[0] = in_ports;
     pkt->handle_std->proto->ehddp->out_ports[0] = out_ports;
    
@@ -220,9 +216,12 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 
 uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_mac){
     uint8_t configuration = 0b01111111;
+    uint8_t device_mac [ETH_ADDR_LEN];
     uint16_t type_device = 0, num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
     uint32_t in_port = htonl(pkt->in_port), out_port_update=0;
-    uint64_t mac_64 = bigtolittle64(mac2int(pkt->dp->ports[1].conf->hw_addr)), id_sdn = bigtolittle64(pkt->dp->id);
+    uint64_t id_sdn = bigtolittle64(pkt->dp->id);
+
+    eth_addr_from_uint64(pkt->dp->id, device_mac);
 
     if (pkt->dp->local_port != NULL ){ /** Soy un nodo SDN*/
         type_device = htons(NODO_SDN);
@@ -232,8 +231,9 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
         type_device = htons(NODO_NO_SDN); 
     } 
 
-    if (num_elements > EHDDP_MAX_ELEMENTS)
+    if (num_elements > EHDDP_MAX_ELEMENTS || num_repetido(pkt) > 0 )
         return num_elements;
+
     if (out_port > 255)
         out_port = 255;
 
@@ -243,10 +243,7 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
         /*Introducimos el valor del campo en el paquete */
     ofpbuf_put(pkt->buffer,&configuration, sizeof(uint8_t));
     ofpbuf_put(pkt->buffer,&type_device, sizeof(uint16_t));
-    if (pkt->dp->local_port != NULL )
-        ofpbuf_put(pkt->buffer,&id_sdn, sizeof(uint64_t));
-    else
-        ofpbuf_put(pkt->buffer,&mac_64, sizeof(uint64_t));
+    ofpbuf_put(pkt->buffer,&id_sdn, sizeof(uint64_t));
     ofpbuf_put(pkt->buffer,&in_port, sizeof(uint32_t));
     ofpbuf_put(pkt->buffer,&out_port_update, sizeof(uint32_t));
 
@@ -256,8 +253,7 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
 
     pkt->handle_std->proto->ehddp->num_devices = num_elements;
     pkt->handle_std->proto->ehddp->previous_size_mac = 0x06; //estamos en un switch ethernet
-    memcpy(&pkt->handle_std->proto->ehddp->last_mac, 
-        pkt->dp->ports[1].conf->hw_addr,sizeof(uint8_t)*ETH_ADDR_LEN); //decimos que hemos sido nosotros los ultimos en modificar
+    memcpy(&pkt->handle_std->proto->ehddp->last_mac, device_mac, sizeof(uint8_t)*ETH_ADDR_LEN); //decimos que hemos sido nosotros los ultimos en modificar
     memcpy(&pkt->handle_std->proto->ehddp->nxt_mac, nxt_mac,sizeof(uint8_t)*ETH_ADDR_LEN); 
 
     pkt->packet_out=false;
@@ -265,6 +261,19 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
 
     packet_handle_std_validate(pkt->handle_std);
     return 0;
+}
+
+uint16_t num_repetido(struct packet * pkt){
+    int i = 0, repetidos = 0;
+
+    for (i = 0; i < pkt->handle_std->proto->ehddp->num_devices; i++)
+    {
+        if (pkt->handle_std->proto->ehddp->ids[i] == pkt->dp->id)
+            repetidos ++;
+        
+    }
+    return repetidos;
+
 }
 
 struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port)

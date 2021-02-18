@@ -110,7 +110,7 @@ pipeline_destroy(struct pipeline *pl);
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 //selector de paquetes especificos del protocolo
-uint8_t selecto_ehddp_packets(struct packet *pkt);
+uint8_t select_ehddp_packets(struct packet *pkt);
 //manejador de paquetes request del protocolo
 uint8_t handle_ehddp_request_packets(struct packet *pkt);
 //manejador de paquetes replay del protocolo

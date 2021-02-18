@@ -75,7 +75,7 @@ packet_clone(struct packet *pkt);
 
 //funciones para crear paquete de Discovery hybrid topologies
 struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst,
-    uint32_t in_port, uint32_t out_port, uint16_t type_device, uint64_t mac_device_64, uint8_t num_devices,
+    uint32_t in_port, uint32_t out_port, uint16_t type_device, uint8_t num_devices,
     u_int64_t num_sec, u_int64_t num_ack, u_int32_t time_block);
 
 //funcion para actualizar los paquetes
@@ -84,6 +84,7 @@ struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32
     char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port);
 void send_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
     char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port);
+uint16_t num_repetido(struct packet * pkt);
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #endif /* PACKET_H */

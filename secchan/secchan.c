@@ -981,21 +981,10 @@ bool get_ofp_packet_eth_header_UAH(struct relay *r, struct ofl_msg_packet_in **o
         *opip = oflpi;
         b.data = (*opip)->data;
         b.size = (*opip)->data_length;
-        //*ethp = (void *) opi->data;
         eth = ofpbuf_try_pull(&b, ETH_HEADER_LEN);
-        // if(htons(eth->eth_type)==ETH_TYPE_ARP){
-        //     struct arp_eth_header *arp = ofpbuf_try_pull(&b, ARP_ETH_HEADER_LEN);
-        //     // VLOG_WARN(LOG_MODULE, "[GET OFP PACKET ETH HEADER UAH] ETH_TYPE: 0x%x\tARP_TPA=%u\tARP_OP=%d", htons(eth->eth_type),arp->ar_tpa, arp->ar_op);
-        // }
         *ethp = eth;
-
-        // VLOG_WARN(LOG_MODULE, "[GET OFP PACKET ETH HEADER UAH] ETH_TYPE: 0x%x",htons(eth->eth_type));
-        // VLOG_WARN(LOG_MODULE, "[GET OFP PACKET ETH HEADER UAH] ETH_DST: %02x:%02x:%02x:%02x:%02x:%02x", eth->eth_dst[0], eth->eth_dst[1], eth->eth_dst[2], eth->eth_dst[3], eth->eth_dst[4], eth->eth_dst[5]);
-        // VLOG_WARN(LOG_MODULE, "[GET OFP PACKET ETH HEADER UAH] ETH_SRC: %02x:%02x:%02x:%02x:%02x:%02x", eth->eth_src[0], eth->eth_src[1], eth->eth_src[2], eth->eth_src[3], eth->eth_src[4], eth->eth_src[5]);
-
         return true;
     }
-
     return false;
 }
 
@@ -1004,7 +993,6 @@ uint16_t get_of_port_UAH(const char *controller_str)
     char *str = NULL, *str_aux = NULL, *controller_str_aux = NULL;
     int i;
     uint16_t connection_port = 0;
-    // VLOG_WARN(LOG_MODULE, "[SECCHAN main]: Parámetros controlador %s", controller_str);
     controller_str_aux = xstrdup(controller_str);
     //controller_str contiene un string del estilo tcp:10.0.0.88:6653 por lo que se hace un split del string y se guarda el ultimo bloque
     for (str = strtok_r(controller_str_aux, ":", &str_aux), i = 0;
