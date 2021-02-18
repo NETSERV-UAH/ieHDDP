@@ -53,51 +53,14 @@ Run the following commands in the `ofsoftswitch13` directory to build and instal
 1. Start the datapath:
 
     ```
-    $ sudo udatapath/ofdatapath --datapath-id=<dpid> --interfaces=<if-list> ptcp:<port>
+    $ sudo udatapath/ofdatapath -d=<dpid> -i=<if-list> punix:<socket> --no-slicing -I <Ip-inband>
     ```
-
-    This will start the datapath, with the given datapath ID, using the interaces listed. It will open a passive TCP connection on the given port. For a complete list of options, use the `--help` argument.
 
 2. Start the secure channel, which will connect the datapath to the controller:
 
     ```
     $ secchan/ofprotocol tcp:<switch-host>:<switch-port> tcp:<ctrl-host>:<ctrl-port>
     ```
-
-    This will open TCP connections to both the switch and the controller, relaying OpenFlow protocol messages between them. For a complete list of options, use the `--help` argument.
-
-## Configuring
-You can send requests to the switch using the `dpctl` utility.
-
-* Check the flow statistics for table 0.
-
-    ```
-    $ utilities/dpctl tcp:<switch-host>:<switch-port> stats-flow table=0
-    ```
-
-* Install a flow to match IPv6 packets with extension headers hop by hop and destination and coming from port 1.
-
-    ```
-    $ utilities/dpctl tcp:<switch-host>:<switch-port> flow-mod table=0,cmd=add in_port=1,eth_type=0x86dd,ext_hdr=hop+dest apply:output=2
-    ```
-
-* Add a meter:
-
-    ```
-    $ utilities/dpctl tcp:<switch-host>:<switch-port> meter-mod cmd=add,meter=1 drop:rate=50
-    ```
-
-* Send flow to meter table
-
-    ```
-    $ utilities/dpctl tcp:<switch-host>:<switch-port> flow-mod table=0,cmd=add in_port=1 meter:1
-    ```
-
-For a complete list of commands and arguments, use the `--help` argument. Also, check the wiki for [Flow Mod examples](https://github.com/CPqD/ofsoftswitch13/wiki/Dpctl-Flow-Mod-Cases)
-
-# Contribute
-Please submit your bug reports, fixes and suggestions as pull requests on
-GitHub, or by contacting us directly.
 
 # License
 HDDP Switch is released under the GPLv3 license. 
