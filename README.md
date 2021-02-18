@@ -1,4 +1,10 @@
 # eHDDP Switch In-Band
+
+Copyright (C) 2020 Isaias Martinez-Yelmo(1), Joaquín Álvarez-Horcajo(1);
+
+                 (1) GIST, University of Alcala, Spain.
+
+
 ## Before building
 The switch makes use of the NetBee library to parse packets, so we need to install it first.
 
