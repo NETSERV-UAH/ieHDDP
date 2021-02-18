@@ -11,7 +11,8 @@ The switch makes use of the NetBee library to parse packets, so we need to insta
 1. Install the following packages:
 
     ```
-    $ sudo apt-get install cmake libpcap-dev libxerces-c3.1 libxerces-c-dev libpcre3 libpcre3-dev flex bison pkg-config autoconf libtool libboost-dev
+    $ sudo apt-get install cmake libpcap-dev libxerces-c3.1 libxerces-c-dev 
+    $ sudo apt-get install libpcre3 libpcre3-dev flex bison pkg-config autoconf libtool libboost-dev
     ```
 
 2. Clone and build netbee
