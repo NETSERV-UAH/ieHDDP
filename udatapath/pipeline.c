@@ -694,8 +694,8 @@ uint8_t select_ehddp_packets(struct packet *pkt, uint8_t resent_packet_ehddp){
 
 uint8_t ehddp_mod_local_port (struct packet * pkt){
 
-    //struct in_addr ip_if;
-    //uint32_t old_local_port;
+    struct in_addr ip_if;
+    uint32_t old_local_port;
     uint8_t mac[ETH_ADDR_LEN];
     struct sw_port *p;
     int error, result;
@@ -714,10 +714,12 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
                         pkt->handle_std->proto->ehddp->num_sec);
                 /*Configuramos el puerto de entrada como nuevo puerto local*/
                 /*Modificaciones UAH*/
-                VLOG_WARN(LOG_MODULE, "Entro para modificar el LOCAL PORT");
                 LIST_FOR_EACH (p, struct sw_port, node, &pkt->dp->port_list) {
-                    if (pkt->in_port == p->conf->port_no){
-                        /*if (pkt->dp->local_port != NULL){
+                    if (pkt->in_port == p->conf->port_no && (conection_status_ofp_controller & (4 | 8 | 16)) == 0) // S_ACTIVE = 8 y S_IDLE = 16)
+                    {
+                        VLOG_WARN(LOG_MODULE, "Entro para modificar el LOCAL PORT");
+                        VLOG_WARN(LOG_MODULE, "El valor de conection_status_ofp_controller es >> %d <<", conection_status_ofp_controller);
+                        if (pkt->dp->local_port != NULL){
                             //Solo lo quiero ejecutar cuando sean distintas
                             if (strcmp(p->conf->name, pkt->dp->local_port->conf->name) != 0)
                             {
@@ -748,10 +750,10 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
                                 //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
                             }
                             break;
-                        }*/
-                        if (pkt->dp->local_port == NULL)
+                        }
+                        else
                         {
-                            VLOG_WARN(LOG_MODULE, "Entro en la opcion donde NO existe un puerto local anterior");
+                            VLOG_WARN(LOG_MODULE, "El nodo no tiene conexión todavia así vamos a itentar conectar");
                             eth_addr_from_uint64(pkt->dp->id, mac);
                             error = configure_new_local_port_ehddp_UAH(pkt->dp, &ip_in_band, mac, 0);
                             if (!error) {

@@ -235,7 +235,7 @@ int main(int argc, char *argv[])
     memcpy(status_remote_rconn_ant, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
     memcpy(status_remote_rconn, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
     if (rconn_is_connected(local_rconn)) //solo lo envío si existe conexión con el puerto local
-        send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t(remote_rconn)); //rconn_get_state_uint8_t(remote_rconn));
+        send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
     /*Fin Modificacion*/
 
     while (s.discovery || rconn_is_alive(remote_rconn))
@@ -251,7 +251,7 @@ int main(int argc, char *argv[])
                 , status_remote_rconn_ant, status_remote_rconn);
             memcpy(status_remote_rconn_ant, status_remote_rconn, strlen(rconn_get_state(remote_rconn)));
             if (rconn_is_connected(local_rconn)) //solo lo envío si existe conexión con el puerto local
-                send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t(remote_rconn)); //rconn_get_state_uint8_t(remote_rconn));
+                send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
         }
         /*Fin Modificacion*/
 

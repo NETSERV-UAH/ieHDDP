@@ -147,8 +147,8 @@ static void disconnect(struct rconn *, int error);
 static void flush_queue(struct rconn *);
 static void question_connectivity(struct rconn *);
 static void copy_to_monitor(struct rconn *, const struct ofpbuf *);
-static bool is_connected_state(enum state);
 static bool is_admitted_msg(const struct ofpbuf *);
+static bool is_connected_state(enum state);
 
 /* Creates a new rconn, connects it (reliably) to 'name', and returns it. */
 struct rconn *
@@ -717,9 +717,14 @@ rconn_get_state(const struct rconn *rc)
 
 /*modificacion uah*/
 const uint8_t
-rconn_get_state_uint8_t(const struct rconn *rc)
+rconn_get_state_uint8_t_uah(const struct rconn *rc)
 {
     return rc->state;
+}
+
+bool rconn_is_connected_uah(uint8_t status)
+{
+    return is_connected_state(status);
 }
 /*Fin modificacion uah*/
 
@@ -1015,7 +1020,7 @@ copy_to_monitor(struct rconn *rc, const struct ofpbuf *b)
     ofpbuf_delete(clone);
 }
 
-static bool
+bool
 is_connected_state(enum state state)
 {
     return (state & (S_ACTIVE | S_IDLE)) != 0;
