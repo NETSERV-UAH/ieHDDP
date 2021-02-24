@@ -466,3 +466,21 @@ void in_band_start(struct secchan *secchan,
                                               in_band);
     add_hook(secchan, &in_band_hook_class, in_band);
 }
+
+/*Modificacion UAH*/
+void send_controller_connection_to_ofdatapath_UAH(struct rconn * local_rconn, uint8_t status_connection){
+
+    struct ofpbuf *payload, * packet_out;
+    int error = 0;
+
+    payload = ofpbuf_new(sizeof(uint8_t));
+    payload->size = sizeof(uint8_t);
+    memcpy(payload->data, &status_connection, sizeof(uint8_t));
+    
+    packet_out = make_packet_out(payload, 0xffffffff, OFPP_CONTROLLER, NULL, 0);
+    error = rconn_send(local_rconn, packet_out, NULL);
+    if (error)
+        VLOG_ERR(LOG_MODULE, "ALGO HA IDO MAL EN EL ENVIO DEL ESTADO DE COMUNICACIÖN CON EL CONTROLLER, error: No se ha conectado con destino");
+    else
+        VLOG_WARN(LOG_MODULE, "La comunicación del estado se ha realizado con existo");
+}

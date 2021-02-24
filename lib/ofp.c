@@ -334,13 +334,19 @@ make_packet_out(const struct ofpbuf *packet, uint32_t buffer_id,
                 uint32_t in_port,
                 const struct ofp_action_header *actions, size_t n_actions)
 {
-    //Modificaciones UAH//
-    size_t actions_len = n_actions * ntohs(actions->len);
-    //****//
 
     struct ofp_packet_out *opo;
-    size_t size = sizeof *opo + actions_len + (packet ? packet->size : 0);
+    size_t size = 0;
     struct ofpbuf *out = ofpbuf_new(size);
+    
+    //Modificaciones UAH//
+    size_t actions_len = 0; 
+    if (actions != NULL)
+        actions_len = n_actions * ntohs(actions->len);
+
+    size = sizeof (*opo) + actions_len + (packet ? packet->size : 0);
+    //****//
+
     opo = ofpbuf_put_uninit(out, sizeof *opo);
     opo->header.version = OFP_VERSION;
     opo->header.type = OFPT_PACKET_OUT;

@@ -1452,9 +1452,9 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 
 			//pasamos tiempo para ser legible
 			if (aux->valid_time_entry > time_msec())
-				sprintf(mac_tabla + strlen(mac_tabla),"%.3f |",((float)(aux->valid_time_entry - time_msec()))/1000);
+				sprintf(mac_tabla + strlen(mac_tabla),"%.3f \n",((float)(aux->valid_time_entry - time_msec()))/1000);
 			else
-				sprintf(mac_tabla + strlen(mac_tabla),"Caducada");
+				sprintf(mac_tabla + strlen(mac_tabla),"Caducada\n");
 		}
 		i++;
 		aux = aux->next;
@@ -1547,11 +1547,14 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, 
             inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
             VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s", ip_aux);
 
-            return 1;
+            return -1;
         }
         send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
+        return 1;
     }
-    return 1;
+    else
+        return 0;
+    
 }
 
 uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name)

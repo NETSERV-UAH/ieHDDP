@@ -104,6 +104,8 @@ void
 pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
     struct flow_table *table, *next_table;
 
+    uint8_t resent_packet_ehddp = 0;
+
     if (VLOG_IS_DBG_ENABLED(LOG_MODULE)) {
         char *pkt_str = packet_to_string(pkt);
         VLOG_DBG_RL(LOG_MODULE, &rl, "processing packet: %s", pkt_str);
@@ -117,9 +119,8 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
     }
 
     /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-    /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
-    select_ehddp_packets(pkt);
-
+    resent_packet_ehddp = ehddp_mod_local_port (pkt);
+    
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
     next_table = pl->tables[0];
     while (next_table != NULL) {
@@ -159,6 +160,8 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
             }
 
         } else {
+            /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
+            select_ehddp_packets(pkt, resent_packet_ehddp);
             /* OpenFlow 1.3 default behavior on a table miss */
 			VLOG_DBG_RL(LOG_MODULE, &rl, "No matching entry found. Dropping packet.");
 			packet_destroy(pkt);
@@ -663,7 +666,7 @@ static inline uint64_t hton642(uint64_t n) {
 }
 
 
-uint8_t select_ehddp_packets(struct packet *pkt){
+uint8_t select_ehddp_packets(struct packet *pkt, uint8_t resent_packet_ehddp){
     uint16_t  eth_type = pkt->handle_std->proto->eth->eth_type;
 
     //packet HDT (EthType = FFAA o AAFF)
@@ -672,7 +675,7 @@ uint8_t select_ehddp_packets(struct packet *pkt){
         // VLOG_INFO(LOG_MODULE, "Paquete ehddp detectado Opcode : %d", (int)pkt->handle_std->proto->ehddp->opcode);
         if (pkt->handle_std->proto->ehddp->opcode == 1){
             VLOG_INFO(LOG_MODULE, "Paquete ehddp REQUEST detectado");
-            handle_ehddp_request_packets(pkt);
+            handle_ehddp_request_packets(pkt, resent_packet_ehddp);
         }//paquetes unicast son paquetes reply
         else if (pkt->handle_std->proto->ehddp->opcode == 2){
             VLOG_INFO(LOG_MODULE, "Paquete ehddp REPLY detectado");
@@ -682,131 +685,134 @@ uint8_t select_ehddp_packets(struct packet *pkt){
             VLOG_INFO(LOG_MODULE, "Paquete ehddp ACK detectado No nos interesa para redes ethernet");
         }
         else{
-            VLOG_INFO(LOG_MODULE, "Paquete ehddp DEFECTUOSO!!!");
+            VLOG_INFO(LOG_MODULE, "Paquete ehddp DEFECTUOSO option code: >>> %d <<< !!!", pkt->handle_std->proto->ehddp->opcode);
         }
     }
     //el paquete no es un eHDDP se debe tratar por otro lado
     return 1;
 }
 
-uint8_t handle_ehddp_request_packets(struct packet *pkt){
-    int table_port = 0; //varible auxiliar para puertp
-    int resend_request = 1, response_reply = 1, modificar_local_port = 0; //variable para responder o no con reply
-    int num_ports = 0; //numero de puertos disponibles
+uint8_t ehddp_mod_local_port (struct packet * pkt){
 
-    struct in_addr ip_if;
-    uint32_t old_local_port;
+    //struct in_addr ip_if;
+    //uint32_t old_local_port;
     uint8_t mac[ETH_ADDR_LEN];
     struct sw_port *p;
-    int error;
+    int error, result;
 
-    VLOG_INFO(LOG_MODULE, "Calculamos el puerto de entrada y el numero de puertos disponible");
-    num_ports = num_port_available(pkt->dp);
-    table_port = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->eth->eth_src, pkt->handle_std->proto->ehddp->num_sec);
-    VLOG_INFO(LOG_MODULE, "Puerto: entrada %d | Puerto en tabla: %d | Numero de puertos disponibles: %d  | Tiempo de bloqueo: %d", 
-        pkt->in_port, table_port ,num_ports, htonl(pkt->handle_std->proto->ehddp->time_block));
-
-    if (table_port == -1 ) //Puerto no encontrado
-    {
-        VLOG_INFO(LOG_MODULE, "Anyado entrada a la tabla de bloqueo: %d", pkt->in_port);
-        mac_to_port_add(&bt_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
-            pkt->handle_std->proto->ehddp->num_sec);
-        response_reply = 0;
-        modificar_local_port = 1;
-        resend_request = 1;
-    }
-    else if (table_port == 0 ) //puerto encontrado pero caducado
-    {
-        VLOG_INFO(LOG_MODULE, "actualizo el puerto de la entrada de tabla BT al puerto: %d", pkt->in_port);
-        mac_to_port_update(&bt_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
-            pkt->handle_std->proto->ehddp->num_sec);
-        response_reply = 0;
-        modificar_local_port = 0;
-        resend_request = 1;
-    }
-    /*else if (table_port == pkt->in_port){ //Puerto encontrado y valido, comparamos con el de entrada
-        VLOG_INFO(LOG_MODULE, "actualizo el tiempo de la entrada de tabla BT");
-        mac_to_port_time_refresh(&bt_table, pkt->handle_std->proto->eth->eth_src, htonl(pkt->handle_std->proto->ehddp->time_block),
-            pkt->handle_std->proto->ehddp->num_sec);
-        response_reply = 0;
-        modificar_local_port = 0;
-        resend_request = 0;
-    } */
-    else
-    {
-        /* contestamos con reply */
-        response_reply = 1;
-        modificar_local_port = 0;
-        resend_request = 0;
-    }
-    
-    //visualizar_tabla(&bt_table, pkt->dp->id);
-
-    if (modificar_local_port == 1 && (pkt->dp->id != 1) ){
-    /*Configuramos el puerto de entrada como nuevo puerto local*/
-    /*Modificaciones UAH*/
-        VLOG_WARN(LOG_MODULE, "Entro para modificar el LOCAL PORT");
-        LIST_FOR_EACH (p, struct sw_port, node, &pkt->dp->port_list) {
-            if (pkt->in_port == p->conf->port_no){
-                if (pkt->dp->local_port != NULL){
-                    /*Solo lo quiero ejecutar cuando sean distintas*/
-                    if (strcmp(p->conf->name, pkt->dp->local_port->conf->name) != 0)
-                    {
-                        VLOG_WARN(LOG_MODULE, "Entro en la opcion SI existe un puerto local anterior");
-                        /*Si existia un puerto local anterior le utilizamos para hacer el cambio*/
-                        old_local_port = p->conf->port_no;
-                        memcpy(mac, netdev_get_etheraddr(pkt->dp->local_port->netdev), ETH_ADDR_LEN);
-                        ip_if = remove_local_port_UAH(pkt->dp);
-                        if (configure_new_local_port_ehddp_UAH(pkt->dp, &ip_if, mac, old_local_port) > -1)
+    if((pkt->handle_std->proto->eth->eth_type== ETH_TYPE_EHDDP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP_INV) && pkt->dp->id > 1){
+        if (pkt->handle_std->proto->ehddp->opcode == 1)
+        {
+            result = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->handle_std->proto->ehddp->num_sec);
+            if (result <= 0){
+                /*Guardamos la info para no liarla */
+                if (result == -1)
+                    mac_to_port_add(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
+                        pkt->handle_std->proto->ehddp->num_sec);
+                else
+                    mac_to_port_update(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
+                        pkt->handle_std->proto->ehddp->num_sec);
+                /*Configuramos el puerto de entrada como nuevo puerto local*/
+                /*Modificaciones UAH*/
+                VLOG_WARN(LOG_MODULE, "Entro para modificar el LOCAL PORT");
+                LIST_FOR_EACH (p, struct sw_port, node, &pkt->dp->port_list) {
+                    if (pkt->in_port == p->conf->port_no){
+                        /*if (pkt->dp->local_port != NULL){
+                            //Solo lo quiero ejecutar cuando sean distintas
+                            if (strcmp(p->conf->name, pkt->dp->local_port->conf->name) != 0)
+                            {
+                                VLOG_WARN(LOG_MODULE, "Entro en la opcion SI existe un puerto local anterior");
+                                //Si existia un puerto local anterior le utilizamos para hacer el cambio
+                                old_local_port = p->conf->port_no;
+                                memcpy(mac, netdev_get_etheraddr(pkt->dp->local_port->netdev), ETH_ADDR_LEN);
+                                ip_if = remove_local_port_UAH(pkt->dp);
+                                if (configure_new_local_port_ehddp_UAH(pkt->dp, &ip_if, mac, old_local_port) == 1)
+                                {
+                                    VLOG_WARN(LOG_MODULE, "Se ha configurado el nuevo puerto local partiendo de otro anterior >>%s<<", 
+                                        pkt->dp->local_port->conf->name);
+                                    local_port_ok = false;
+                                }
+                                else{
+                                    VLOG_WARN(LOG_MODULE, "El puerto esta raro lo eliminamos");
+                                    free(pkt->dp->local_port);
+                                    error = dp_ports_add_local(pkt->dp, p->conf->name);
+                                    local_port_ok = false;
+                                    if (error) {
+                                        ofp_error(error, "failed to add local port %s", p->conf->name);
+                                        if (pkt->dp->local_port != NULL)
+                                            free(pkt->dp->local_port);
+                                        return -1;
+                                    }
+                                } 
+                                //Ahora hacemos que el ofprotocol se entere
+                                //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
+                            }
+                            break;
+                        }*/
+                        if (pkt->dp->local_port == NULL)
                         {
-                            VLOG_WARN(LOG_MODULE, "Se ha configurado el nuevo puerto local partiendo de otro anterior >>%s<<", 
-                                pkt->dp->local_port->conf->name);
-                            time_init_local_port = 0;
-                            local_port_ok = false;
-                            /*Ahora hacemos que el ofprotocol se entere*/
-                            dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
-                        }
-                        else{
-                            VLOG_WARN(LOG_MODULE, "El puerto esta raro lo eliminamos");
-                            free(pkt->dp->local_port);
-                            error = dp_ports_add_local(pkt->dp, p->conf->name);
-                            if (error) {
+                            VLOG_WARN(LOG_MODULE, "Entro en la opcion donde NO existe un puerto local anterior");
+                            eth_addr_from_uint64(pkt->dp->id, mac);
+                            error = configure_new_local_port_ehddp_UAH(pkt->dp, &ip_in_band, mac, 0);
+                            if (!error) {
                                 ofp_error(error, "failed to add local port %s", p->conf->name);
                                 if (pkt->dp->local_port != NULL)
                                     free(pkt->dp->local_port);
+                                return -1;
                             }
+                            /*Ahora hacemos que el ofprotocol se entere*/
+                            //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
                             local_port_ok = false;
-                            time_init_local_port = 0;
-                        } 
+                        }
+                        break;
                     }
-                    break;
                 }
-                else
-                {
-                    VLOG_WARN(LOG_MODULE, "Entro en la opcion donde NO existe un puerto local anterior");
-                    eth_addr_from_uint64(pkt->dp->id, mac);
-                    error = configure_new_local_port_ehddp_UAH(pkt->dp, &ip_in_band, mac, 0);
-                    /*Ahora hacemos que el ofprotocol se entere*/
-                    //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
-                    time_init_local_port = 0;
-                    local_port_ok = false;
-                }
-                break;
+                return 1;
             }
         }
+    }
+    return 0;
+}
 
-        /*+++FIN+++*/
+uint8_t handle_ehddp_request_packets(struct packet *pkt, uint8_t resent_packet_ehddp){
+    int table_port = 0; //varible auxiliar para puertp
+    int send_ehddp_packet = 0; //1 only request paquet; 2 only reply packet;
+    int num_ports = 0; //numero de puertos disponibles
+
+    VLOG_INFO(LOG_MODULE, "Calculamos el puerto de entrada y el numero de puertos disponible");
+    num_ports = num_port_available(pkt->dp);
+    //table_port = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->eth->eth_src, pkt->handle_std->proto->ehddp->num_sec);
+    VLOG_INFO(LOG_MODULE, "Puerto: entrada %d | Puerto en tabla: %d | Numero de puertos disponibles: %d  | Tiempo de bloqueo: %d", 
+        pkt->in_port, table_port ,num_ports, htonl(pkt->handle_std->proto->ehddp->time_block));
+
+    if (resent_packet_ehddp == 1 && local_port_ok == false) // Mismo puerto que el anotado en el paso anterior -> no puede existir un puerto no encontrado cuando llegue aqui(table_port == -1 ) //Puerto no encontrado
+    {
+                VLOG_INFO(LOG_MODULE, "actualizo el puerto de la entrada de tabla BT al puerto: %d", pkt->in_port);
+        mac_to_port_update(&bt_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
+            pkt->handle_std->proto->ehddp->num_sec);
+        send_ehddp_packet = 1;
+    }
+    else if ((resent_packet_ehddp == 0 && local_port_ok == false))
+    {
+        /* contestamos con reply */
+        send_ehddp_packet = 2;
+    }
+    else{
+        //si somos un nodo sdn y tenemos la regla instaladas no debemos llegar aqui
+        send_ehddp_packet = 0; 
     }
     
+    //visualizar_tabla(&bt_table, pkt->dp->id);
+    
     /* Si solo tengo un puerto contesto con reply */
-    if (num_ports == 1 || (response_reply == 1 && resend_request == 0)){
-        VLOG_INFO(LOG_MODULE, "Entramos en generar el reply: num_ports: %d | response_reply: %d", num_ports, response_reply);
+    if (num_ports == 1 || send_ehddp_packet == 2){
+        VLOG_INFO(LOG_MODULE, "Entramos en generar el reply: num_ports: %d", num_ports);
         //visualizar_tabla(&bt_table, pkt->dp->id);
         creator_ehddp_reply_packets(pkt);
     }
     //actualizo el numero de dispositivos por los que pasa el request, solo si tengo puertos
     //disponibles para reenviar el paquete
-    else if(resend_request == 1) 
+    else if(send_ehddp_packet == 1) 
     {
         update_data_msg(pkt, (uint32_t) OFPP_FLOOD, pkt->handle_std->proto->ehddp->nxt_mac);
         VLOG_INFO(LOG_MODULE,"Update number of jump: %d ", pkt->handle_std->proto->ehddp->num_devices);
@@ -832,8 +838,8 @@ uint8_t handle_ehddp_reply_packets(struct packet *pkt){
     }
     else
     {
-        if (pkt->dp->local_port == NULL)
-            type_device = NODO_NO_SDN; 
+        if (local_port_ok == false)
+            type_device = NODO_SDN_CONFIG; 
         else
             type_device = NODO_SDN;
 
@@ -873,9 +879,9 @@ void creator_ehddp_reply_packets(struct packet *pkt){
     uint16_t type_device = 0x02;
     uint8_t num_devices = 0x01;
 
-    if (pkt->dp->local_port == NULL){
-        type_device = NODO_NO_SDN; 
-        VLOG_INFO(LOG_MODULE, "Son un nodo NO_SDN:%d",NODO_NO_SDN);
+    if (local_port_ok == false){
+        type_device = NODO_SDN_CONFIG; 
+        VLOG_INFO(LOG_MODULE, "Son un nodo NO_SDN:%d",NODO_SDN_CONFIG);
     }
     else
     {

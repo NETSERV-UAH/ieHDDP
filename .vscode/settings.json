@@ -2,6 +2,13 @@
     "files.associations": {
         "typeinfo": "c",
         "cerrno": "c",
-        "*.def": "c"
+        "*.def": "c",
+        "*.tcc": "c",
+        "optional": "c",
+        "fstream": "c",
+        "istream": "c",
+        "ostream": "c",
+        "sstream": "c",
+        "streambuf": "c"
     }
 }

@@ -228,7 +228,7 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
     }
     else /** soy un NO SDN */
     {
-        type_device = htons(NODO_NO_SDN); 
+        type_device = htons(NODO_SDN_CONFIG); 
     } 
 
     if (num_elements > EHDDP_MAX_ELEMENTS || num_repetido(pkt) > 0 )

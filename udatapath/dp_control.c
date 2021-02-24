@@ -115,6 +115,16 @@ handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
     if(sender->remote->role == OFPCR_ROLE_SLAVE){
         return ofl_error(OFPET_BAD_REQUEST, OFPBRC_IS_SLAVE);
     }
+    
+    /*modificación UAH*/
+    if ((uint8_t)msg->data_length == 1){ //si la longitud del mensaje es de 1 solo caracter es nuestro fijo 
+        conection_status_ofp_controller = (uint8_t)msg->data[0];
+        ofl_msg_free_packet_out(msg, false, dp->exp);   
+        VLOG_WARN(LOG_MODULE, "conection_status_ofp_controller >> %d <<", conection_status_ofp_controller);
+        return 0;
+    }
+    /*fin modificación UAH*/
+
     error = dp_actions_validate(dp, msg->actions_num, msg->actions);
     if (error) {
         return error;

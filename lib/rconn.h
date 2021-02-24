@@ -82,4 +82,8 @@ unsigned int rconn_get_connection_seqno(const struct rconn *);
 /* void rconn_update_protocol_stat(struct rconn *,
                                 struct ofpstat *, struct ofpstat *); */
 
+/*Modificacion UAH*/
+const uint8_t rconn_get_state_uint8_t(const struct rconn *);
+/* Fin modificacion*/
+
 #endif /* rconn.h */

@@ -76,6 +76,7 @@ uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto q
 bool local_port_ok = false;
 struct in_addr ip_in_band;
 uint64_t time_init_local_port = 0;
+uint8_t conection_status_ofp_controller = 0;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -180,6 +181,8 @@ udatapath_cmd(int argc, char *argv[])
         VLOG_INFO(THIS_MODULE, "time_init_uah:%ld\n", (long)time_init_uah);
     }
     
+    time_init_local_port = 0;
+
     /*Fin Modificacion UAH eHDDP, JAH-*/
     for (;;) {
         dp_run(dp);
@@ -191,6 +194,7 @@ udatapath_cmd(int argc, char *argv[])
         {
             VLOG_INFO(THIS_MODULE,"Borramos los bloqueos antiguos");
             mac_to_port_delete_timeout(&bt_table);
+            visualizar_tabla(&bt_table, dp->id);
             deletetimeBT = time_msec();
         }
         /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/

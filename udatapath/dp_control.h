@@ -27,6 +27,9 @@
  * Datapath control channel related functions.
  ****************************************************************************/
 
+/*Modificación UAH*/
+extern uint8_t conection_status_ofp_controller;
+/*Fin modificación UAH*/
 
 struct sender;
 

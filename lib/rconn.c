@@ -715,6 +715,14 @@ rconn_get_state(const struct rconn *rc)
     return state_name(rc->state);
 }
 
+/*modificacion uah*/
+const uint8_t
+rconn_get_state_uint8_t(const struct rconn *rc)
+{
+    return rc->state;
+}
+/*Fin modificacion uah*/
+
 /* Returns the number of connection attempts made by 'rc', including any
  * ongoing attempt that has not yet succeeded or failed. */
 unsigned int

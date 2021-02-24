@@ -38,14 +38,11 @@ struct sender;
 
 extern struct mac_to_port neighbor_table, bt_table;
 extern bool local_port_ok;
+extern uint8_t conection_status_ofp_controller;
 
 //tiempo de vida del controlador en la tabla de controladores debe ser mas 
 //pequeño que el tiempo entre refresco del controlador
 #define BT_TIME 20
-
-//Tipos de dispositivos 
-#define NODO_SDN 1
-#define NODO_NO_SDN 2
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
@@ -110,14 +107,16 @@ pipeline_destroy(struct pipeline *pl);
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 //selector de paquetes especificos del protocolo
-uint8_t select_ehddp_packets(struct packet *pkt);
+uint8_t select_ehddp_packets(struct packet *pkt, uint8_t resent_packet_ehddp);
 //manejador de paquetes request del protocolo
-uint8_t handle_ehddp_request_packets(struct packet *pkt);
+uint8_t handle_ehddp_request_packets(struct packet *pkt, uint8_t resent_packet_ehddp);
 //manejador de paquetes replay del protocolo
 uint8_t handle_ehddp_reply_packets(struct packet *pkt);
 
 //Generador de todos los paquetes que debemos enviar
 void creator_ehddp_reply_packets(struct packet *pkt);
+
+uint8_t ehddp_mod_local_port (struct packet * pkt);
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #endif /* PIPELINE_H */
