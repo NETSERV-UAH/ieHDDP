@@ -1,0 +1,325 @@
+package DHTapp;
+
+import java.net.URI;
+import java.util.List;
+import java.util.ArrayList;
+
+import org.onosproject.net.*;
+import org.onosproject.net.device.*;
+import org.onosproject.net.provider.ProviderId;
+import static org.onosproject.net.DeviceId.deviceId;
+import static org.onosproject.net.PortNumber.portNumber;
+
+import org.onlab.packet.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+/**
+ * @brief Provider de dispositivos para DHT
+ * @author Joaquin Alvarez Horcajo
+ */
+
+
+public class DHTproviderdevices implements DeviceProvider {
+
+    /** Atributes */
+    /** @brieg Servicio de Log*/
+    private final Logger log = LoggerFactory.getLogger(getClass());
+    /** Valores typo de dispostivos validos */
+    public short TYPE_NO_SDN = 2, TYPE_SDN = 1;
+    private enum TYPE_SENSORS {
+        TEMPERATURE, WIND, PRESSURE, LIGHT, ACCELEROMETER,
+                VIBRATION, GIROSCOPE, PROXIMITY, DISTANCE, MOVEMENT, SMOKE,
+                MAGNETISM, HUMIDITY};
+
+    public static ProviderId PID;
+
+    /** @brief Construcctor de la clase */
+    public DHTproviderdevices(ProviderId pid){
+        PID = pid;
+    }
+
+    /** @brief Crea o actualiza los dispositivos no sensores de la red
+     *  @param dps: DeviceProviderService
+     *  @param hw:  numero hardware del switch
+     *  @param sw: version del software
+     *  @param id: identificador del switch
+     *  @param manufacturer: codigo del manufacturer
+     *  @param type: tipo de dispositivo
+     *  @param mac: direccion mac principal del dispositivo
+     *  @param serial: numero de serie del dispositivo
+     *
+     */
+    public void CreateorUpdateDevice(DeviceProviderService dps, DeviceService dsv, String hw, String sw, String id, String manufacturer,
+                             Device.Type type, String mac, String serial) {
+        URI uri;
+        DeviceDescription desc;
+
+        ChassisId cid = new ChassisId(mac);
+
+
+        if (hw.contains(" Sensor")){
+            uri = URI.create(id);
+            /** Creamos el dispositivo */
+            desc =
+                    new DefaultDeviceDescription(uri, type, manufacturer, hw, sw, serial, cid,
+                            true, DefaultAnnotations.builder().set(AnnotationKeys.PROTOCOL, "No Have")
+                            .set(AnnotationKeys.USERNAME, hw).set(AnnotationKeys.MANAGEMENT_ADDRESS, "1.0.0.1")
+                            .set(AnnotationKeys.NAME, hw)
+                            .build());
+        }
+        else{
+            uri = URI.create("sw:"+id);
+            /** Creamos el dispositivo */
+            desc =
+                    new DefaultDeviceDescription(uri, type, manufacturer, hw, sw, serial, cid,
+                            true, DefaultAnnotations.builder().set("Switch", "Legacy Switch")
+                            .set(AnnotationKeys.PROTOCOL, "No Have").set(AnnotationKeys.USERNAME, "GateWay")
+                            .set(AnnotationKeys.MANAGEMENT_ADDRESS, "1.0.0.1").set(AnnotationKeys.NAME, "GateWay")
+                            .build());
+        }
+        DeviceId deviceId = deviceId(uri);
+
+        /** unimos el puerto al device */
+        dps.deviceConnected(deviceId, desc);
+
+        /**Le cambiamos el role*/
+        roleChanged(deviceId,MastershipRole.STANDBY);
+        dps.receivedRoleReply(deviceId, MastershipRole.STANDBY, MastershipRole.STANDBY);
+
+    }
+
+    /** @brief Nos dice si un device existe ya o no
+     *
+     * @param dsr DeviceService
+     * @param deviceId Identificador del switch
+     * @return true si existe, false en caso contrario
+     */
+    public boolean DeviceExist(DeviceService dsr, DeviceId deviceId){
+        if (dsr.getDevice(deviceId) != null){
+            return true;
+        }
+        return false;
+    }
+
+    /** @brief Comprueba que todos los dispositivos existen y si alguno no existe lo crea
+     *
+     * @param dpsv DeviceProviderService
+     * @param dsv DeviceService
+     * @param Packet_dht DHTpacket
+     * @return True si todo ha ido correcto y false en caso contrario
+     */
+    public boolean checkdevices(DeviceProviderService dpsv, DeviceService dsv, DHTpacket Packet_dht, short modeDHT,
+                                String TYPE_SENSORS[]){
+        short type_device[] = Packet_dht.getTypedevices();
+        String Mac;
+
+        for (int pos = 0; pos < Packet_dht.getNumHops(); pos++){
+            Mac = Long.toHexString(Packet_dht.getidmacdevices()[pos]);
+            if (type_device[pos] == TYPE_NO_SDN ){
+                /** Debemos actualizar los dispositivos siempre */
+                try{
+                    CreateorUpdateDevice(dpsv, dsv,"NO SDN DEVICE", "1.0.0",
+                            Mac, "Switch Legacy", Device.Type.SWITCH, Mac, Mac);
+                }catch (Exception e){
+                    log.error("DHTapp ERROR al crear nuevos dispositivos : "+ e.getMessage());
+                    return false;
+                }
+            }
+            /** Si tenemos un sensor y permitimos la conexiones entre sensores */
+            else if(modeDHT == 1 && type_device[pos] > TYPE_NO_SDN){
+                /** Debemos actualizar los dispositivos siempre */
+                try{
+                    CreateorUpdateDevice(dpsv, dsv,TYPE_SENSORS[type_device[pos]-3]+" Sensor", "1.0.1",
+                            Mac,"Sensor", Device.Type.OTHER, Mac, Mac);
+                }catch (Exception e){
+                    log.error("DHTapp ERROR al crear nuevos sensores : "+ e.getMessage());
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /** Comprueba que todos los puertos existen y si alguno no existe lo crea
+     *
+     * @param dpsv DeviceProviderService
+     * @param dsv DeviceService
+     * @param Packet_dht DHTpacket
+     * @return true Si se han creado y asignado correctamente los puerto a los dispositivos; false en caso contrario
+     */
+    public boolean checkportperdevices(DeviceProviderService dpsv, DeviceService dsv, DHTpacket Packet_dht,
+                                       short modeDHT, String TYPE_SENSORS[]){
+        short type_device[] = Packet_dht.getTypedevices();
+        int num_port = 0;
+        int ports_in[] = Packet_dht.getinports(), ports_out[] = Packet_dht.getoutports();
+        String Nom_URI = "";
+        /** Matriz de puertos a insertar, máximo 2 puertos por switch y paquete recibido */
+        long num_ports[] = new long[2];
+
+        for (int pos = 0; pos < Packet_dht.getNumHops(); pos++){
+            if ( (modeDHT == 0 && (type_device[pos] == TYPE_NO_SDN || type_device[pos] == TYPE_SDN )) ||
+                    modeDHT == 1 ){
+                switch(type_device[pos])
+                {
+                    case 1: /* SDN case */
+                        Nom_URI = "of:"+parser_idpacket_to_iddevice(Packet_dht.getidmacdevices()[pos]);
+                        break;
+                    case 2:
+                        Nom_URI = "sw:"+Long.toHexString(Packet_dht.getidmacdevices()[pos]);
+                        break;
+                    default: /* Sensor case, only when we can connect two sensor between them*/
+                        Nom_URI = Long.toHexString(Packet_dht.getidmacdevices()[pos]);
+                        break;
+                }
+                /** Si me llega un 0 como puerto lo elimino */
+                if (ports_out[pos] == 0 || ports_in[pos] == 0)
+                    return false;
+                 /** creamos el uri del device */
+                URI uri = URI.create(Nom_URI);
+                /** Reiniciamos la acumulacion */
+                num_port = 0;
+                num_ports[0] = num_ports[1] = 0;
+                /** Comprobamos los puerto de entrada de los dispositivos */
+                if (!PortIsOnDevice (dsv, deviceId(uri), ports_in[pos])){
+                    num_ports[num_port] = (long)ports_in[pos];
+                    num_port++;
+                }
+                if (ports_out[pos] != ports_in[pos]){
+                    /** Comprobamos los puerto de salida de los dispositivos */
+                    if (!PortIsOnDevice (dsv, deviceId(uri), ports_out[pos])){
+                        num_ports[num_port] = (long)ports_out[pos];
+                        num_port++;
+                    }
+                }
+                /** Si existe algun puerto para crear */
+                if (num_port > 0){
+                    try{
+                        LinkPortToDevice(dpsv, dsv, deviceId(Nom_URI), num_port, num_ports);
+                    }catch (Exception e){
+                        log.error("Algo fue mal con los puertos: "+e.getMessage());
+                        /** Algo ha ido con ERROR*/
+                        return false;
+                    }
+                }
+            }
+        }
+        /** Todo ha ido correctamente */
+        return true;
+    }
+
+    /** Enlaza una lista de puertos a un dispositivo
+     *
+     * @param dps DeviceProviderService
+     * @param dsv DeviceService
+     * @param deviceId id del dispositivo (DeviceId)
+     * @param num_port numero total de puertos a asignar al dispositivo
+     * @param num_ports lista de puertos (solo el identificador numerico del puerto)
+     */
+    public void LinkPortToDevice(DeviceProviderService dps, DeviceService dsv, DeviceId deviceId, int num_port, long num_ports[]){
+        List<PortDescription> portsdescription = new ArrayList<>();
+        List<Port>ports = dsv.getPorts(deviceId);
+
+        /** Configuramos los nuevos puertos */
+        for (int pos = 0; pos < num_port; pos++){
+            portsdescription.add(CreatePortDescription(Port.Type.COPPER, num_ports[pos], 1000));
+        }
+        /** debemos meter los antiguos tambien */
+        for(Port port : ports) {
+            if (port.isEnabled()) /* solo lo add si esta activo */
+                portsdescription.add(CreatePortDescription(Port.Type.COPPER, port.number().toLong(), 1000));
+        }
+
+        /** Actualizamos los puertos del dispositivo */
+        dps.updatePorts(deviceId, portsdescription);
+    }
+
+    /** Nos comprueba si un dispositivo tiene un puerto o no
+     *
+     * @param dsr DeviceService
+     * @param deviceId id del dispositivo (DeviceId)
+     * @param num_port identificador del puerto a comprobar
+     * @return true si el puerto esta en el dispositivo y false en caso contrario
+     */
+    public boolean PortIsOnDevice (DeviceService dsr, DeviceId deviceId, int num_port){
+
+        Device device = dsr.getDevice(deviceId);
+        if (device != null){
+            if (dsr.getPort(deviceId, portNumber(num_port)) != null)
+                return true;
+            else
+                return false;
+        }
+        return false;
+    }
+
+    /** @brieg Crea una puerto para un device
+     *
+     * @param Type typo de dispositivo
+     * @param Port identificador del puerto
+     * @param speed velocidad del enlace
+     * @return devuelve la descripcion del puerto en una variable tipo PortDescription
+     */
+    public PortDescription CreatePortDescription(Port.Type Type, long Port, long speed) {
+        return DefaultPortDescription.builder().withPortNumer(portNumber(Port)).isEnabled(true).
+                portSpeed(speed).type(Type).build();
+
+    }
+
+    public boolean removedevice(DeviceProviderService deviceProviderService, DeviceService deviceService, DeviceId deviceid){
+        try{
+            /** Eliminamos los puertos del dispositivo */
+            for (Port port: deviceService.getPorts(deviceid)){
+                deviceProviderService.deletePort(deviceid,
+                        CreatePortDescription(port.type(), port.number().toLong(), port.portSpeed()));
+            }
+            /** Eliminamos El dispositivo */
+            deviceProviderService.deviceDisconnected(deviceid);
+        }catch (Exception e){
+            log.error("DHTAPP ERROR :AL BORRAR LOS DISPOSITIVOS");
+            log.error(e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * @brief Parsea la id recibida en el paquete a una valida para el sistema *
+     * @param dpid Id del dispositivo (long)
+     */
+    private String parser_idpacket_to_iddevice(long dpid) {
+        String DpString = Long.toHexString(dpid);
+        int len = DpString.length();
+
+        for(int aux = len; aux<16; aux++){
+            DpString="0"+ DpString;
+        }
+        return DpString;
+    }
+
+    @Override
+    public void triggerProbe(DeviceId deviceId) {
+
+    }
+
+    @Override
+    public void roleChanged(DeviceId deviceId, MastershipRole mastershipRole) {
+
+    }
+
+    @Override
+    public boolean isReachable(DeviceId deviceId) {
+        return false;
+    }
+
+    @Override
+    public void changePortState(DeviceId deviceId, PortNumber portNumber, boolean b) {
+
+    }
+
+    @Override
+    public ProviderId id() {
+        return PID;
+    }
+}

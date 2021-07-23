@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<scr:component xmlns:scr="http://www.osgi.org/xmlns/scr/v1.1.0" immediate="true" name="DHTapp.AppComponent" activate="activate" deactivate="deactivate">
+    <implementation class="DHTapp.AppComponent"/>
+    <property name="service.pid" value="DHTapp.AppComponent"/>
+    <reference name="linkService" interface="org.onosproject.net.link.LinkService" cardinality="1..1" policy="static" bind="bindLinkService" unbind="unbindLinkService"/>
+    <reference name="packetService" interface="org.onosproject.net.packet.PacketService" cardinality="1..1" policy="static" bind="bindPacketService" unbind="unbindPacketService"/>
+    <reference name="coreService" interface="org.onosproject.core.CoreService" cardinality="1..1" policy="static" bind="bindCoreService" unbind="unbindCoreService"/>
+    <reference name="deviceService" interface="org.onosproject.net.device.DeviceService" cardinality="1..1" policy="static" bind="bindDeviceService" unbind="unbindDeviceService"/>
+    <reference name="hostService" interface="org.onosproject.net.host.HostService" cardinality="1..1" policy="static" bind="bindHostService" unbind="unbindHostService"/>
+    <reference name="netCfgService" interface="org.onosproject.net.config.NetworkConfigRegistry" cardinality="1..1" policy="static" bind="bindNetCfgService" unbind="unbindNetCfgService"/>
+    <reference name="linkProviderRegistry" interface="org.onosproject.net.link.LinkProviderRegistry" cardinality="1..1" policy="static" bind="bindLinkProviderRegistry" unbind="unbindLinkProviderRegistry"/>
+    <reference name="deviceProviderRegistry" interface="org.onosproject.net.device.DeviceProviderRegistry" cardinality="1..1" policy="static" bind="bindDeviceProviderRegistry" unbind="unbindDeviceProviderRegistry"/>
+    <reference name="hostProviderRegistry" interface="org.onosproject.net.host.HostProviderRegistry" cardinality="1..1" policy="static" bind="bindHostProviderRegistry" unbind="unbindHostProviderRegistry"/>
+</scr:component>
