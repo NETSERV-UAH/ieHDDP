@@ -752,7 +752,8 @@ dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no) {
     p = dp_ports_lookup(dp, port_no);
 
     if (p == NULL) {
-        return ofl_error(OFPET_PORT_MOD_FAILED,OFPPMFC_BAD_PORT);
+        VLOG_INFO(LOG_MODULE, "Puerto no encontrado");
+        return ofl_error(OFPET_PORT_MOD_FAILED, OFPPMFC_BAD_PORT);
     }
 
     /*Notify all controllers that the port status has changed*/
@@ -760,6 +761,36 @@ dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no) {
     rep_msg.reason =   OFPPR_MODIFY;
     rep_msg.desc = p->conf;      
     dp_send_message(dp, (struct ofl_msg_header *)&rep_msg, NULL/*sender*/);
+    return 0;
+}
+
+ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, uint8_t *mac, uint32_t old_local_port)
+{
+       
+    struct ofl_msg_packet_in msg;
+    struct packet *pkt;
+
+    pkt = create_ehddp_new_localport_packet_UAH(dp, new_local_port, port_name, mac, &old_local_port);
+
+    // VLOG_WARN(LOG_MODULE, "Función DP ACTION OUTPUT PORT case OFPP_CONTROLLER.");
+    msg.header.type = OFPT_PACKET_IN;
+    msg.total_len = pkt->buffer->size;
+    msg.reason = OFPR_ACTION;
+    msg.table_id = pkt->table_id;
+    msg.data = pkt->buffer->data;
+    msg.cookie = 0xffffffffffffffff;
+    msg.buffer_id = OFP_NO_BUFFER;
+    msg.data_length = pkt->buffer->size;
+
+    if (!pkt->handle_std->valid)
+    {
+        packet_handle_std_validate(pkt->handle_std);
+    }
+    /* In this implementation the fields in_port and in_phy_port
+        always will be the same, because we are not considering logical
+        ports*/
+    msg.match = (struct ofl_match_header *)&pkt->handle_std->match;
+    dp_send_message(pkt->dp, (struct ofl_msg_header *)&msg, NULL);
     return 0;
 }
 
@@ -1225,7 +1256,7 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
 
     nuevo_elemento->port_in = port_in;
     //guardamos el momento en que la entrada deja de ser valida
-    nuevo_elemento->valid_time_entry = time_msec() + time;
+    nuevo_elemento->valid_time_entry = time_msec() + (time * 0.8);
     memcpy(nuevo_elemento->Mac, Mac, ETH_ADDR_LEN);
     nuevo_elemento->nuevo_puerto = true;
     nuevo_elemento->num_sec = num_sec;
@@ -1239,6 +1270,24 @@ int mac_to_port_add(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], uin
     mac_port->fin = nuevo_elemento;
     mac_port->num_element++;
     return 0;
+}
+
+int mac_to_port_check_timeout(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN])
+{
+	struct mac_port_time *aux = mac_port->inicio;
+	uint64_t marca_tiempo_msec = time_msec();
+	while(aux != NULL)
+	{
+		if (memcmp(aux->Mac, Mac, ETH_ADDR_LEN) == 0)
+		{
+			if (marca_tiempo_msec > aux->valid_time_entry) 
+				return 1; 
+			else
+				return 0; 
+			}
+		aux = aux->next;
+	}
+	return 2; 
 }
 
 //update element
@@ -1259,9 +1308,9 @@ int mac_to_port_update(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN], 
                 aux->port_in = port_in;
                 aux->num_sec = num_sec;
                 //miramos cual si el tiempo guardado + la actualizacion
-                if (time_msec() + time >= aux->valid_time_entry)
+                if (time_msec() + (time * 0.8) >= aux->valid_time_entry)
                     // le metemos el tiempo correspondiente
-                    aux->valid_time_entry = time_msec() + time;
+                    aux->valid_time_entry = time_msec() + (time * 0.8);
                 //todo correcto
                 return 0; 
             }
@@ -1283,8 +1332,8 @@ int mac_to_port_time_refresh(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_
                 //miramos cual si el tiempo guardado + la actualizacion
                 aux->nuevo_puerto = false;
                 aux->num_sec = num_sec;
-                if (time_msec() + time > aux->valid_time_entry)
-                    aux->valid_time_entry = time_msec() + time; // le metemos el tiempo correspondiente
+                if (time_msec() + (time * 0.8) > aux->valid_time_entry)
+                    aux->valid_time_entry = time_msec() + (time * 0.8); // le metemos el tiempo correspondiente
                 return 0; //todo correcto
             }
             aux = aux->next; //pasamos al siguiente elemento de la lista
@@ -1354,57 +1403,178 @@ int mac_to_port_delete_timeout(struct mac_to_port *mac_port)
     struct mac_port_time *anterior = mac_port->inicio;
     struct mac_port_time *actual = mac_port->inicio;
     uint64_t marca_tiempo_msec = time_msec();
+    bool inicial = false;
     
-    //Buscamos si tenemos elementos que buscar
-    
-    VLOG_INFO(LOG_MODULE, "Numero de elementos: %d", mac_port->num_element);
+    //Buscamos si tenemos elementos que buscar   
     while (actual != NULL && mac_port->num_element > 0)
     {
-        if (marca_tiempo_msec > actual->valid_time_entry )
+        if (marca_tiempo_msec >= actual->valid_time_entry )
         {
-            VLOG_INFO(LOG_MODULE, "Iniciamos el borrado del elemento caducado");
             if(actual == mac_port->inicio && actual == mac_port->fin){
-                VLOG_INFO(LOG_MODULE, "Es el primer y ultimo elemento de la lista");
                 mac_port->inicio = NULL;
                 mac_port->fin = NULL;
                 mac_port->num_element = 0;
             }
             else if(actual == mac_port->inicio)
             {
-                VLOG_INFO(LOG_MODULE, "Es el primer elemento de la lista");
                 mac_port->inicio = actual->next;
                 anterior = mac_port->inicio;
+                inicial = true;
             }
             else if(actual == mac_port->fin)
             {
-                VLOG_INFO(LOG_MODULE, "Es el ultimo elemento de la lista");
                 anterior->next = NULL;
                 mac_port->fin = anterior;
             }
             else{
-                VLOG_INFO(LOG_MODULE, "Es el ultimo elemento de la lista");
                 anterior->next = actual->next;
             }
             if (actual != NULL){
                 free(actual);
-                VLOG_INFO(LOG_MODULE, "Actual liberado correctamente");
             }
             if (mac_port->num_element > 0 ){
                 mac_port->num_element--;
-                VLOG_INFO(LOG_MODULE, "Numero de elementos: %d", mac_port->num_element);
+            }  
+        }
+        else
+        {
+            anterior = actual;
+        }
+        if (anterior != NULL)
+        {
+            if (inicial == true)
+            {
+                actual = mac_port->inicio;
+            }
+            else{
+                actual = anterior->next;
+            }
+            inicial = false;
+        }
+        else
+            actual = NULL;
+        
+    }
+    return 0;
+}
+
+/*Debemos guardar todos los elementos de un mismo controlador por tanto cuando el controlador
+este caducado borramos todo*/
+int mac_to_port_delete_timeout_ehddp(struct mac_to_port *mac_port)
+{
+    struct mac_port_time *anterior = mac_port->inicio;
+    struct mac_port_time *actual = mac_port->inicio;
+    uint64_t marca_tiempo_msec = time_msec();
+    uint8_t limpiar_tabla = 0;
+    bool inicial = false;
+    
+    //Buscamos si tenemos elementos que buscar
+    
+    //comprobamos si el controlador ha caducado y en tal caso borramos todo
+    if (mac_port->num_element > 0){
+        if (marca_tiempo_msec > actual->valid_time_entry )
+        {
+            limpiar_tabla = 1;
+        }
+    }
+
+    while (actual != NULL && mac_port->num_element > 0)
+    {
+        if (limpiar_tabla == 1)
+        {
+            if(actual == mac_port->inicio && actual == mac_port->fin){
+                mac_port->inicio = NULL;
+                mac_port->fin = NULL;
+                mac_port->num_element = 0;
+            }
+            else if(actual == mac_port->inicio)
+            {
+                mac_port->inicio = actual->next;
+                anterior = mac_port->inicio;
+                inicial = true;
+            }
+            else if(actual == mac_port->fin)
+            {
+                anterior->next = NULL;
+                mac_port->fin = anterior;
+            }
+            else{
+                anterior->next = actual->next;
+            }
+            if (actual != NULL){
+                free(actual);
+            }
+            if (mac_port->num_element > 0 ){
+                mac_port->num_element--;
             }  
         }
         else
         {
             anterior = anterior->next;
-            VLOG_INFO(LOG_MODULE, "Elemento no borrado");
+        }
+        if (anterior != NULL)
+        {
+            if (inicial == true)
+            {
+                actual = anterior;
+            }
+            else{
+                actual = anterior->next;
+            }
+            inicial = false;
+        }
+        else
+            actual = NULL;
+        
+    }
+    return 0;
+}
+
+int mac_to_port_delete_position(struct mac_to_port *mac_port, int position)
+{
+    struct mac_port_time *anterior = mac_port->inicio;
+    struct mac_port_time *actual = mac_port->inicio;
+    int pos_act = 1;
+    
+    //Buscamos si tenemos elementos que buscar
+    while (actual != NULL && mac_port->num_element > 0)
+    {
+        if (pos_act == position)
+        {
+            if(actual == mac_port->inicio && actual == mac_port->fin){
+                mac_port->inicio = NULL;
+                mac_port->fin = NULL;
+                mac_port->num_element = 0;
+            }
+            else if(actual == mac_port->inicio)
+            {
+                mac_port->inicio = actual->next;
+                anterior = mac_port->inicio;
+            }
+            else if(actual == mac_port->fin)
+            {
+                anterior->next = NULL;
+                mac_port->fin = anterior;
+            }
+            else{
+                anterior->next = actual->next;
+            }
+            if (actual != NULL){
+                free(actual);
+            }
+            if (mac_port->num_element > 0 ){
+                mac_port->num_element--;
+            }  
+        }
+        else
+        {
+            pos_act++;
+            anterior = anterior->next;
         }
         if (anterior != NULL)
             actual = anterior->next;
         else
             actual = NULL;
-        
-        VLOG_INFO(LOG_MODULE, "Pasamos al siguiente");
     }
     return 0;
 }
@@ -1451,10 +1621,8 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath)
 			sprintf(mac_tabla + strlen(mac_tabla), "| %d |",aux->port_in);
 
 			//pasamos tiempo para ser legible
-			if (aux->valid_time_entry > time_msec())
-				sprintf(mac_tabla + strlen(mac_tabla),"%.3f \n",((float)(aux->valid_time_entry - time_msec()))/1000);
-			else
-				sprintf(mac_tabla + strlen(mac_tabla),"Caducada\n");
+			//if (aux->valid_time_entry > time_msec())
+			sprintf(mac_tabla + strlen(mac_tabla),"%.3f \n",((float)(aux->valid_time_entry - time_msec()))/1000);
 		}
 		i++;
 		aux = aux->next;
@@ -1514,46 +1682,60 @@ struct in_addr remove_local_port_UAH(struct datapath *dp)
     dp->local_port = NULL;
 
     if (ip_if.s_addr == INADDR_ANY)                                           //Si la IP es 0.0.0.0 es decir no hay
-        ip_if.s_addr = ip_in_band.s_addr;                                     //le asignamos la definida en la configuración incial
+        ip_if.s_addr = ip_de_control_in_band.s_addr;                                     //le asignamos la definida en la configuración incial
         
     return ip_if;
 }
 
-int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, uint8_t *mac, uint32_t old_local_port)
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port)
 {
     int error;
     struct sw_port *p;
     struct mac_port_time *aux = bt_table.inicio;
     char ip_aux[INET_ADDRSTRLEN];
-    struct in_addr mask, local_ip = *ip;
+    struct in_addr mask, local_ip = ip_de_control_in_band;
     if  (aux != NULL)
     {
         p = dp_ports_lookup(dp, aux->port_in);
         if (p == NULL)
         {
             VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Software port NO ENCONTRADO %d!!", aux->port_in);
-            return -1;
+            return 0;
         }
         error = dp_ports_add_local(dp, p->conf->name);
-        inet_pton(AF_INET, "255.255.255.0", &(mask.s_addr));
-        inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
-        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Antiguo puerto local (%u)\tNuevo puerto local %s (%u)", old_local_port, 
-            p->conf->name, p->conf->port_no);
-        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s (mask: %s)", ip_aux, "255.255.255.0");
-        netdev_set_in4(dp->local_port->netdev, local_ip, mask); //Se configura la ip del nuevo puerto local
-        if (error || !netdev_get_in4(dp->local_port->netdev, &local_ip))
-        {
-            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: No se ha configurado correctamente el nuevo puero local!!");
-            inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
-            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s", ip_aux);
+        if (!error){           
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Antiguo puerto local (%u) | Nuevo puerto local %s (%u)", old_local_port, 
+                p->conf->name, p->conf->port_no);
 
-            return -1;
+            //inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
+            inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
+            inet_pton(AF_INET, "255.255.255.0", &(mask.s_addr));
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s (mask: %s)", ip_aux, "255.255.255.0");
+            netdev_set_in4(dp->local_port->netdev, local_ip, mask); //Se configura la ip del nuevo puerto local
+            if (!netdev_get_in4(dp->local_port->netdev, &local_ip)){
+                VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: No se ha configurado correctamente el nuevo puero local!!");
+                inet_ntop(AF_INET, &local_ip.s_addr, ip_aux, INET_ADDRSTRLEN);
+                VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: IP de la interfaz %s", ip_aux);
+                return 0;
+            }
+            
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Enviamos informacion al OFPROTOCOL para que cambie el puerto local!!");
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Port = %d | name = %s ", p->conf->port_no, p->conf->name);
+            error = send_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, mac, old_local_port); 
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Mensaje enviado con codigo de ERROR -> %d", error);
         }
-        send_ehddp_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, ip, mac, &old_local_port); 
-        return 1;
+        else
+        {
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: ADD local port FAIL!!!");
+            return 0;
+        }
+        return p->conf->port_no;
     }
     else
-        return 0;
+    {
+        VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: No se puede configurar ningun puerto local ya que no conocemos como llegar al controller!!!");
+        return -1;
+    }
     
 }
 
@@ -1569,6 +1751,5 @@ uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name)
     }
     return 0;
 }
-
 
 /*Fin Modificacion UAH eHDDP, JAH-*/

@@ -62,7 +62,10 @@
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 #define ETH_TYPE_EHDDP     0xFFAA
 #define ETH_TYPE_EHDDP_INV 0xAAFF
-#define ETH_TYPE_EHDDP_INT 0xFFBB //JAH-UAH
-#define ETH_TYPE_EHDDP_INT_INV 0xBBFF //JAH-UAH Valores al reves para procesar el pipeline (Little Endian)
+#define ETH_TYPE_CHANGE_LOCAL_PORT 0xFFBB //JAH-UAH
+#define ETH_TYPE_CHANGE_LOCAL_PORT_INV 0xBBFF //JAH-UAH Valores al reves para procesar el pipeline (Little Endian)
+#define ETH_TYPE_ARP_INV   0x0608
+#define ETH_TYPE_IP_INV    0x0008
+
 
 #endif /* OFL_PACKETS_H */

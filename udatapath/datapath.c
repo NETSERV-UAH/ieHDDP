@@ -686,16 +686,25 @@ uint32_t dp_set_ip_addr(char * ip_aux){
 }
 
 char * quitar_espacios(char * optarg){
-    char * result = malloc(sizeof(char) * strlen(optarg));
+    char * result = (char*)malloc(sizeof(char) * strlen(optarg));
+    char * Ip_valida;
     int i = 0, p = 0;
+
 
     for (i = 0; i< strlen(optarg); i++)
     {
-        if (optarg[i] != ' '){
+        if (((int)optarg[i]>=48 && (int)optarg[i]<=57) || optarg[i] == '.'){
             result[p] = optarg[i];
             p++;
-        }
+        } 
     }
+    Ip_valida = (char*)malloc(sizeof(char)*(p+1));
+    memcpy(Ip_valida, result, p);
 
-    return result;
+    return Ip_valida;
+}
+
+int send_openflow_buffer_uah(struct datapath *dp, struct ofpbuf *buffer,
+                     const struct sender *sender){
+    return send_openflow_buffer(dp, buffer, sender);
 }

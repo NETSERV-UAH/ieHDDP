@@ -186,8 +186,6 @@ int
 dp_send_message(struct datapath *dp, struct ofl_msg_header *msg,
                      const struct sender *sender);
 
-
-
 /* Handles a set description (openflow experimenter) message */
 ofl_err
 dp_handle_set_desc(struct datapath *dp, struct ofl_exp_openflow_msg_set_dp_desc *msg,
@@ -207,5 +205,8 @@ dp_handle_async_request(struct datapath *dp, struct ofl_msg_async_config *msg,
 uint32_t get_dp_local_port_number_UAH(struct datapath *dp);
 uint32_t dp_set_ip_addr(char * ip_aux);
 char * quitar_espacios(char * optarg);
+
+int send_openflow_buffer_uah(struct datapath *dp, struct ofpbuf *buffer,
+                     const struct sender *sender);
 
 #endif /* datapath.h */

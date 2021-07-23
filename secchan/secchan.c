@@ -111,8 +111,10 @@ int main(int argc, char *argv[])
     struct discovery *discovery;
     struct switch_status *switch_status;
     struct port_watcher *pw;
+    struct ofp_port * ofp_port;
     int i;
     int retval;
+    uint32_t local_port = 0, local_port_ant = 0;
 
     /*Modificacion UAH*/
     char * status_remote_rconn, *status_remote_rconn_ant;
@@ -193,13 +195,20 @@ int main(int argc, char *argv[])
 
     /* Connect to controller. */
     remote_rconn = rconn_create(s.probe_interval, s.max_backoff);
-    if (s.controller_names[0])
-    {
-        retval = rconn_connect(remote_rconn, s.controller_names[0]);
-        if (retval == EAFNOSUPPORT)
+    /*JAH modificación UAH */
+    if(strstr(s.dp_name, "switch01") != NULL){
+        if (s.controller_names[0])
         {
-            ofp_fatal(0, "No support for %s vconn", s.controller_names[0]);
+            VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Nombre del controlador al que conectamos -> %s", s.controller_names[0]);
+            retval = rconn_connect(remote_rconn, s.controller_names[0]);
+            if (retval == EAFNOSUPPORT)
+            {
+                ofp_fatal(0, "No support for %s vconn", s.controller_names[0]);
+            }
         }
+    }
+    else{
+        VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Todavia no conocemos el pw");
     }
     switch_status_register_category(switch_status, "remote",
                                     rconn_status_cb, remote_rconn);
@@ -218,6 +227,7 @@ int main(int argc, char *argv[])
     }
     if (s.in_band)
     {
+        VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Configuramos el In_Band para el nodo");
         in_band_start(&secchan, &s, switch_status, pw, remote_rconn);
     }
     if (s.num_controllers > 1)
@@ -238,7 +248,8 @@ int main(int argc, char *argv[])
         send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
     /*Fin Modificacion*/
 
-    while (s.discovery || rconn_is_alive(remote_rconn))
+    /*Modificacion UAH JAH*/
+    do
     {
         struct relay *r, *n;
         size_t i;
@@ -247,8 +258,8 @@ int main(int argc, char *argv[])
         memcpy(status_remote_rconn, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
         if (strcmp(status_remote_rconn_ant, status_remote_rconn) != 0){
             //Solo notificamos el cambio de estado del puerto por simplicidad
-            VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Cambio de estado de la conexión con el controlador pasa de >> %s << a >> %s <<"
-                , status_remote_rconn_ant, status_remote_rconn);
+            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Cambio de estado de la conexión con el controlador pasa de >> %s << a >> %s <<"
+            //    , status_remote_rconn_ant, status_remote_rconn);
             memcpy(status_remote_rconn_ant, status_remote_rconn, strlen(rconn_get_state(remote_rconn)));
             if (rconn_is_connected(local_rconn)) //solo lo envío si existe conexión con el puerto local
                 send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
@@ -310,13 +321,41 @@ int main(int argc, char *argv[])
             }
         }
         //Modificaciones UAH//
-        if (s.in_band && !in_band_rules && rconn_is_connected(local_rconn) && get_pw_local_port_number_UAH(pw))
+        //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: UAH -> Condiciones: s.in_band  = %d |  in_band_rules = %d | get_pw_local_port_number_UAH(pw) = %d",
+        //    s.in_band, in_band_rules, get_pw_local_port_number_UAH(pw));
+        
+        if (s.in_band && !in_band_rules && get_pw_local_port_number_UAH(pw) && rconn_is_connected(local_rconn))
         {
-            of_port = get_of_port_UAH(s.controller_names[0]);  // Se obtiene el puerto al que se establece la conexión OpenFlow
+            //of_port = get_of_port_UAH(s.controller_names[0]);  // Se obtiene el puerto al que se establece la conexión OpenFlow
+            of_port = get_pw_local_port_number_UAH(pw);
             VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Puerto obtenido %d", of_port);
-            install_in_band_rules_UAH(local_rconn, secchan.hooks[2].aux, of_port);
+            install_ARP_Controller_rules_UAH(local_rconn, s.controller_names[0], of_port);
+            install_OpenFlow_Controller_rules_UAH(local_rconn, s.controller_names[0], of_port);
             in_band_rules = true;
+            VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: install_ARP_Controller_rules_UAH -> Install OK");
         }
+
+        local_port = get_pw_local_port_number_UAH(pw);
+        if (local_port != 0 && local_port != local_port_ant){
+            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en get_ofp_port_local_UAH");
+            ofp_port = get_ofp_port_local_UAH(pw, local_port);
+            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en get_ofp_port_local_UAH -> OK");
+            if (ofp_port != NULL){
+                install_drop_rules(local_rconn, get_pw_local_port_number_UAH(pw), ofp_port->hw_addr);
+                //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en install_drop_rules -> OK");
+            }
+
+            local_port_ant = local_port;
+            if (!rconn_is_connected(remote_rconn)){
+                VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Intentamos reconectar con el remote");
+                retval = rconn_connect(remote_rconn, s.controller_names[0]);
+                if (retval == EAFNOSUPPORT)
+                {
+                    ofp_fatal(0, "No support for %s vconn", s.controller_names[0]);
+                }
+            }
+        }
+            
         /*+++FIN+++*/
         /* Wait for something to happen. */
         LIST_FOR_EACH(r, struct relay, node, &relays)
@@ -343,7 +382,9 @@ int main(int argc, char *argv[])
             discovery_wait(discovery);
         }
         poll_block();
-    }
+    /*Modificacion UAH JAH*/
+    } while (s.discovery || rconn_is_alive(remote_rconn) || local_port == 0);
+    /*Fin modificacion UAH*/
 
     return 0;
 }
@@ -398,6 +439,7 @@ get_ofp_packet_in(struct relay *r)
 
     if (ofl_msg_unpack(msg->data, msg->size, &ofl_oh, NULL /*xid*/, NULL) && ofl_oh->type == OFPT_PACKET_IN)
     {
+        VLOG_WARN_RL(LOG_MODULE, &rl, "UAH -> seguimos por get_ofp_packet_in");
         return msg->data;
     }
     else
@@ -983,7 +1025,10 @@ struct ofl_msg_packet_in *get_ofl_packet_in_UAH(struct relay *r, uint32_t *in_po
     {
         ofl_packet_in_p = (struct ofl_msg_packet_in *)ofl_oh;
         input = oxm_match_lookup(OXM_OF_IN_PORT, (struct ofl_match *)ofl_packet_in_p->match); //InPort match
-        *in_port = (uint32_t) * (input->value);                                               //Se asigna el valor del in_port extraído del match
+        if (input != NULL){
+            //VLOG_WARN(LOG_MODULE, "[ofl_msg_packet_in]: Puerto de entrada leido %u", *input->value);
+            *in_port = (uint32_t) * (input->value);   //Se asigna el valor del in_port extraído del match
+        }
         *buf = msg;
 
         return ofl_packet_in_p;
@@ -1001,6 +1046,7 @@ bool get_ofp_packet_eth_header_UAH(struct relay *r, struct ofl_msg_packet_in **o
     struct ofpbuf b;
     struct eth_header *eth;
     struct ofl_msg_packet_in *oflpi = get_ofl_packet_in_UAH(r, in_port, buf);
+
     if (oflpi && ntohs(oflpi->data_length) > min_len)
     { //No se si es data_length o total_length. Es data_length porque nos interesa el contenido del packet_in
         *opip = oflpi;

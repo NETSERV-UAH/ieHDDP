@@ -35,6 +35,8 @@
 #include "xtoxll.h"
 #include "vlog.h"
 
+#include "in-band.h"
+
 #define LOG_MODULE VLM_port_watcher
 //**Modificaciones boby UAH**//
 #define OFPP_LOCAL_AUX 0xfffe //65534 Número de puerto para mapear el numero de puerto local a 16bits
@@ -140,7 +142,6 @@ call_local_port_changed_callbacks(struct port_watcher *pw)
     // port = lookup_port(pw, OFPP_LOCAL);
 
     //**Modificaciones boby UAH**//
-
     port = lookup_port(pw, OFPP_LOCAL_AUX);
     /*+++++FIN+++++*/
 
@@ -157,14 +158,16 @@ call_local_port_changed_callbacks(struct port_watcher *pw)
     {
         if (name[0])
         {
-            VLOG_INFO(LOG_MODULE, "Identified data path local port as \"%s\".", name);
+            VLOG_INFO(LOG_MODULE, "UAH -> @@@@@@ ->Identified data path local port as \"%s\".", name);
         }
         else
         {
-            VLOG_WARN(LOG_MODULE, "Data path has no local port.");
+            VLOG_WARN(LOG_MODULE, "UAH -> @@@@@@ -> Data path has no local port.");
         }
         strcpy(pw->local_port_name, name);
     }
+    else
+        VLOG_INFO(LOG_MODULE, "UAH -> @@@@@@ ->(pw->local_port_name -> \"%s\".", pw->local_port_name);
 
     /* Invoke callbacks. */
     for (i = 0; i < pw->n_local_cbs; i++)
@@ -249,12 +252,14 @@ port_watcher_local_packet_cb(struct relay *r, void *pw_)
         {
             pw->datapath_id = osf->datapath_id;
             VLOG_INFO(LOG_MODULE, "Datapath id is %012" PRIx64, ntohll(pw->datapath_id));
+            VLOG_INFO(LOG_MODULE, "Datapath id is %lu", ntohll(pw->datapath_id));
         }
     }
     /*+++FIN+++*/
     else if (oh->type == OFPT_MULTIPART_REPLY)
     {
         struct ofp_multipart_reply *repl = msg->data;
+
         if (ntohs(repl->type) == OFPMP_PORT_DESC)
         {
             bool seen[PORT_ARRAY_SIZE];
@@ -273,7 +278,6 @@ port_watcher_local_packet_cb(struct relay *r, void *pw_)
                 // if (ntohl(opp->port_no) > PORT_ARRAY_SIZE - 1) {
                 if (port_no > PORT_ARRAY_SIZE - 1)
                 {
-
                     if (port_no <= OFPP_MAX)
                     {
                         VLOG_WARN(LOG_MODULE, "Port ID %u over limit", ntohl(opp->port_no));
@@ -286,6 +290,10 @@ port_watcher_local_packet_cb(struct relay *r, void *pw_)
                 /*Modificaciones Boby UAH*/
                 // seen[ntohl(opp->port_no)] = true;
                 seen[port_no] = true;
+
+                //instalamos reglas UAH
+                if (port_no == OFPP_LOCAL_AUX)
+                    install_drop_rules(pw->local_rconn, get_pw_local_port_number_UAH(pw), opp->hw_addr);
                 /*+++FIN+++*/
             }
 
@@ -709,10 +717,34 @@ get_pw_local_port_number_UAH(struct port_watcher *pw)
     }
     return 0;
 }
+
+struct ofp_port * 
+get_ofp_port_local_UAH(struct port_watcher *pw, uint32_t port_no)
+{
+    struct ofp_port *p;
+    unsigned int port_no_p;
+    
+    for (p = port_array_first(&pw->ports, &port_no_p); p;
+         p = port_array_next(&pw->ports, &port_no_p))
+    {
+        if (p->port_no == port_no)
+            return p;
+    }
+    return NULL;
+}
+
+void get_pw_name(struct port_watcher *pw, char * name){
+    name = (char *)malloc(sizeof(char)*strlen(pw->local_port_name));
+    strcpy(name,pw->local_port_name);
+    return;
+}
+
 bool got_features_reply_state_UAH(struct port_watcher *pw)
 {
     return pw->got_feature_reply;
 }
+
+
 void update_port_watcher_ports_UAH(struct port_watcher *pw)
 {
     struct ofpbuf *b;
@@ -725,6 +757,11 @@ void update_port_watcher_ports_UAH(struct port_watcher *pw)
     pw->last_feature_request = time_now();
 
     port_watcher_periodic_cb(pw);
+}
+
+uint64_t get_datapath_id (struct port_watcher *pw)
+{
+    return pw->datapath_id;
 }
 
 //+++FIN+++//

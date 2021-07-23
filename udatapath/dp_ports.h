@@ -31,6 +31,7 @@
 #include "oflib/ofl-structs.h"
 #include "oflib/ofl-messages.h"
 #include "oflib-exp/ofl-exp-openflow.h"
+#include "datapath.h"
 
 
 /****************************************************************************
@@ -111,12 +112,14 @@ struct mac_to_port{
 };
 
 //matriz de vecinos
-struct mac_to_port bt_table;
+struct mac_to_port bt_table, learning_table;
 
 extern uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
 extern bool local_port_ok;
 extern uint64_t time_init_local_port;
-extern struct in_addr ip_in_band;
+extern struct in_addr ip_de_control_in_band;
+extern struct in_addr ip_if;
+extern uint32_t old_local_port;
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #define DP_MAX_PORTS 255
@@ -229,6 +232,11 @@ int mac_to_port_found_port(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LE
 int mac_to_port_found_mac_position(struct mac_to_port *mac_port, uint64_t position, uint8_t * Mac);
 //check de timeout of the mac and port
 int mac_to_port_delete_timeout(struct mac_to_port *mac_port);
+//check timeout
+int mac_to_port_check_timeout(struct mac_to_port *mac_port, uint8_t Mac[ETH_ADDR_LEN]);
+
+int mac_to_port_delete_timeout_ehddp(struct mac_to_port *mac_port);
+int mac_to_port_delete_position(struct mac_to_port *mac_port, int position);
 
 
 /*Debug function */
@@ -237,10 +245,12 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath);
 void log_uah(const void *Mensaje, int64_t id);
 
 struct in_addr remove_local_port_UAH(struct datapath *dp);
-int configure_new_local_port_ehddp_UAH(struct datapath *dp, struct in_addr *ip, uint8_t *mac, uint32_t old_local_port);
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port);
 uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name);
 
 ofl_err dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no);
+ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
+    char *port_name, uint8_t *mac, uint32_t old_local_port);
 /*Fin eHDDP*/
 
 #endif /* DP_PORTS_H */

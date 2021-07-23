@@ -62,6 +62,9 @@ void get_port_name(const struct ofp_port *, char *name, size_t name_size);
 uint32_t get_pw_local_port_number_UAH(struct port_watcher *pw);
 bool got_features_reply_state_UAH(struct port_watcher *pw);
 void update_port_watcher_ports_UAH(struct port_watcher *pw);
+void get_pw_name(struct port_watcher *pw, char * name);
+struct ofp_port * get_ofp_port_local_UAH(struct port_watcher *pw, uint32_t port_no);
+uint64_t get_datapath_id (struct port_watcher *pw);
 //+++FIN+++//
 
 #endif /* port-watcher.h */

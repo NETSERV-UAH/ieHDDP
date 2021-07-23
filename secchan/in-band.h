@@ -39,6 +39,9 @@ void in_band_start(struct secchan *, const struct settings *,
 void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *in_band, uint16_t of_port);
 void install_new_localport_rules_UAH(struct rconn * local_rconn, uint32_t *new_local_port, struct in_addr *local_ip, struct in_addr *controller_ip, uint8_t *mac, uint32_t *old_local_port);
 void send_controller_connection_to_ofdatapath_UAH(struct rconn * local_rconn, uint8_t status_connection);
+void install_drop_rules(struct rconn *local_rconn, uint32_t local_port_no, const uint8_t * mac);
+void install_ARP_Controller_rules_UAH(struct rconn *local_rconn, const char * ip_controller, uint16_t of_port);
+void install_OpenFlow_Controller_rules_UAH(struct rconn *local_rconn, const char * ip_controller, uint16_t of_port);
 //++++++//
 
 #endif /* in-band.h */

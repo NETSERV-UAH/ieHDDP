@@ -94,7 +94,8 @@ secchan/port-watcher.o: secchan/port-watcher.c /usr/include/stdc-predef.h \
  /usr/include/x86_64-linux-gnu/bits/uio_lim.h lib/xtoxll.h lib/vlog.h \
  lib/vlog-modules.def lib/../oflib/vlog-modules.def \
  lib/../oflib-exp/vlog-modules.def lib/../secchan/vlog-modules.def \
- lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def
+ lib/../udatapath/vlog-modules.def lib/../utilities/vlog-modules.def \
+ secchan/in-band.h
 
 /usr/include/stdc-predef.h:
 
@@ -365,3 +366,5 @@ lib/../secchan/vlog-modules.def:
 lib/../udatapath/vlog-modules.def:
 
 lib/../utilities/vlog-modules.def:
+
+secchan/in-band.h:

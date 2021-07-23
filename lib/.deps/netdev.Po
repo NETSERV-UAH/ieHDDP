@@ -63,12 +63,12 @@ lib/netdev.o: lib/netdev.c /usr/include/stdc-predef.h config.h \
  /usr/include/x86_64-linux-gnu/asm/posix_types.h \
  /usr/include/x86_64-linux-gnu/asm/posix_types_64.h \
  /usr/include/asm-generic/posix_types.h /usr/include/linux/netlink.h \
- /usr/include/linux/kernel.h /usr/include/linux/sysinfo.h \
- /usr/include/linux/socket.h /usr/include/linux/if_link.h \
- /usr/include/linux/if_addr.h /usr/include/linux/neighbour.h \
- /usr/include/linux/if_tun.h /usr/include/linux/if_ether.h \
- /usr/include/linux/filter.h /usr/include/linux/bpf_common.h \
- /usr/include/linux/if_packet.h /usr/include/linux/ethtool.h \
+ /usr/include/linux/const.h /usr/include/linux/socket.h \
+ /usr/include/linux/if_link.h /usr/include/linux/if_addr.h \
+ /usr/include/linux/neighbour.h /usr/include/linux/if_tun.h \
+ /usr/include/linux/if_ether.h /usr/include/linux/filter.h \
+ /usr/include/linux/bpf_common.h /usr/include/linux/if_packet.h \
+ /usr/include/linux/ethtool.h \
  /usr/lib/gcc/x86_64-linux-gnu/7/include-fixed/limits.h \
  /usr/lib/gcc/x86_64-linux-gnu/7/include-fixed/syslimits.h \
  /usr/include/limits.h /usr/include/x86_64-linux-gnu/bits/posix1_lim.h \
@@ -295,9 +295,7 @@ lib/netdev.h:
 
 /usr/include/linux/netlink.h:
 
-/usr/include/linux/kernel.h:
-
-/usr/include/linux/sysinfo.h:
+/usr/include/linux/const.h:
 
 /usr/include/linux/socket.h:
 

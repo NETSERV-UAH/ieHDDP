@@ -46,8 +46,8 @@
 #define CTRL_PRIORITY 0xfff0
 #define RULE_PRIORITY 0xfff1
 #define DROP_PRIORITY 0xffff
-#define IDLE_TCP_RULE_TIMEOUT 5  //Segundos máximos sin utilizar la regla TCP
-#define IDLE_ARP_RULE_TIMEOUT 10 //Segundos máximos sin utilizar la regla ARP
+#define IDLE_TCP_RULE_TIMEOUT 300  //Segundos máximos sin utilizar la regla TCP
+#define IDLE_ARP_RULE_TIMEOUT 300 //Segundos máximos sin utilizar la regla ARP
 
 // static void install_new_localport_rules_UAH(struct rconn *local_rconn,  uint32_t new_port, struct in_addr ip);
 struct in_addr local_ip = {0};
@@ -158,10 +158,11 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
     struct ofpbuf *payload, buf_arp, buf_ehddp;
     struct ofpbuf *buf;
     struct flow flow, flow_inv = {0}, flow_tcp = {0};
-    uint32_t in_port, out_port;      /*, priority = 0xfff1; */
+    uint32_t in_port;
+    //uint32_t out_port;      /*, priority = 0xfff1; */
     uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
 
-    if (!get_ofp_packet_eth_header_UAH(r, &oflpi, &eth, &in_port, &buf) || !in_band->of_device)
+    if (!get_ofp_packet_eth_header_UAH(r, &oflpi, &eth, &in_port, &buf) )
     {
         return false;
     }
@@ -182,37 +183,62 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
     {
         return false;
     }
-    // VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: In port= %u\t OFL_PACKET_IN->TOTAL LENGTH = %u", in_port, oflpi->total_len);
     flow_extract(payload, in_port, &flow);
-    if (local_ip.s_addr == 0)
-    {
-        netdev_get_in4(in_band->of_device, &local_ip);
-    }
+  
     //Manejamos el paquete ehddp que indica el nuevo puerto local
-    if (eth->eth_type == htons(ETH_TYPE_EHDDP_INT) || eth->eth_type == htons(ETH_TYPE_EHDDP_INT_INV))
-    {
+    if (eth->eth_type == htons(ETH_TYPE_CHANGE_LOCAL_PORT) || eth->eth_type == htons(ETH_TYPE_CHANGE_LOCAL_PORT_INV))
+    {       
         uint32_t *new_local_port, *old_local_port;
-        uint8_t *char_size, mac[ETH_ADDR_LEN];
-        char *port_name, ip_char[INET_ADDRSTRLEN];
+        uint8_t mac[ETH_ADDR_LEN];//, *char_size;
+        char ip_char[INET_ADDRSTRLEN]; //,*port_name;
         struct in_addr *local_ip_ehddp, controller_ip;
-        
+        uint8_t *char_size;
+        char * port_name;
+      
+        VLOG_ERR(LOG_MODULE, "[in_band_local_packet_cb]: Paquete de notificación eHDDP recibido");
+
         buf_ehddp = *payload;
         ofpbuf_try_pull(&buf_ehddp, ETH_HEADER_LEN);                          //Nos deshacemos de la cabecera ethernet
         new_local_port = ofpbuf_try_pull(&buf_ehddp, sizeof(uint32_t));       //Se obtiene el número del nuevo puerto local
         char_size = ofpbuf_try_pull(&buf_ehddp, sizeof(uint8_t));             //Se obtiene el tamaño del nombre del puerto
-        port_name = ofpbuf_try_pull(&buf_ehddp, *char_size);                  //Se obtiene el nombre del nuevo puerto local
+        port_name = ofpbuf_try_pull(&buf_ehddp, sizeof(char) * (*char_size));                  //Se obtiene el nombre del nuevo puerto local
         local_ip_ehddp = ofpbuf_try_pull(&buf_ehddp, INET_ADDRSTRLEN);        //Se obtiene la ip del puerto local
         memcpy(mac, ofpbuf_try_pull(&buf_ehddp, ETH_ADDR_LEN), ETH_ADDR_LEN); //Se obtiene la MAC del puerto local
         old_local_port = ofpbuf_try_pull(&buf_ehddp, sizeof(uint32_t));       //Se obtiene el número del antiguo puerto local
 
         inet_ntop(AF_INET, &local_ip_ehddp->s_addr, ip_char, INET_ADDRSTRLEN);
-        VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: EHDDP PACKET  NEW PORT = %s(%u)\t IP: %s", port_name, *new_local_port, ip_char);
         controller_ip.s_addr = rconn_get_ip(in_band->controller);
-        install_new_localport_rules_UAH(r->halves[HALF_LOCAL].rconn, new_local_port, local_ip_ehddp, &controller_ip, mac, old_local_port);
+
+        VLOG_INFO(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: Datos recibidos: Puerto = %s ", port_name);
+
+        //actualizamos el port watcher
+        update_port_watcher_ports_UAH(in_band->pw);
+
+        if (*old_local_port != 0)
+        {
+            //VLOG_WARN(LOG_MODULE, "UAH-> Hemos comprobado que SI existe un puerto local anterior");
+            install_new_localport_rules_UAH(r->halves[HALF_LOCAL].rconn, new_local_port, local_ip_ehddp, &controller_ip, mac, old_local_port);
+        }
+        else
+        {
+            //VLOG_WARN(LOG_MODULE, "UAH-> Hemos comprobado que NO existe un puerto local anterior -> Nuevo puerto de controller: %d", 
+            //    get_of_port_UAH(in_band->s->controller_names[0]));
+            install_in_band_rules_UAH(r->halves[HALF_LOCAL].rconn, in_band, get_of_port_UAH(in_band->s->controller_names[0]));
+        }
 
         VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB]: Puerto local PORT WATCHER = %u", get_pw_local_port_number_UAH(in_band->pw));
-
         return false; // Para que no envíe el packet in al controlador.
+    }
+
+    //ahora es cuando comprobamos si existe o no el of_device ya que antes puede que lo tengamos que configurar con el primer paquete ehddp
+    if (!in_band->of_device){ 
+        VLOG_ERR(LOG_MODULE, "[in_band_local_packet_cb]: Todavia no conocemos el in_band->of_device");
+        return false;
+    }
+
+    if (local_ip.s_addr == 0)
+    {
+        netdev_get_in4(in_band->of_device, &local_ip);
     }
 
     if (eth->eth_type == htons(ETH_TYPE_ARP))
@@ -223,20 +249,32 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         eth = ofpbuf_try_pull(&buf_arp, ETH_HEADER_LEN);
         arp = ofpbuf_try_pull(&buf_arp, ARP_ETH_HEADER_LEN);
 
-        if (arp->ar_tpa == rconn_get_ip(in_band->controller) && !eth_addr_equals(arp->ar_sha, netdev_get_etheraddr(in_band->of_device))) //Se comprueba si la IP buscada es la del Controlador
-        {
+        VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: Paquete de notificación ARP recibido");
 
+        //if (arp->ar_tpa == rconn_get_ip(in_band->controller) && 
+        if (!eth_addr_equals(arp->ar_sha, netdev_get_etheraddr(in_band->of_device))) //Se comprueba si la IP buscada es la del Controlador
+        {
+            
+            VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: Creamos regla para controlar los ARPs");    
             in_band_learn_mac(in_band, in_port, eth->eth_src); //Aprende la mac del salto anterior
             // Puerto físico donde está el controlador .
-            out_port = get_pw_local_port_number_UAH(in_band->pw);
+            //out_port = get_pw_local_port_number_UAH(in_band->pw);
 
             //Se configura la regla inversa
-            flow_inv.dl_type = flow.dl_type;
+            //flow_inv.dl_type = flow.dl_type;
+            //flow_inv.dl_type = eth->eth_type;
             memcpy(flow_inv.dl_dst, eth->eth_src, ETH_ADDR_LEN); // MAC switch origen como destino
-            queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, buffer_id, in_port, IDLE_ARP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
+            VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: flow_inv.dl_type = %u | Mac_dst : %X:%X:%X:%X:%X:%X",
+                flow_inv.dl_type, flow_inv.dl_dst[0],flow_inv.dl_dst[1],flow_inv.dl_dst[2],flow_inv.dl_dst[3],flow_inv.dl_dst[4],flow_inv.dl_dst[5]);
+            
+            queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, buffer_id, in_port, OFP_FLOW_PERMANENT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
+            VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: regla para controlar los ARPs enviada correctamente");    
 
+            //VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ARP]: Inport -> %u | OUT_PORT %u", in_port, out_port);
+
+            /*EL forwarding del primer paquete lo hace ofdatapath a través de ARP-PATH -> evitamos repetir paquetes*/
             /* If the switch didn't buffer the packet, we need to send a copy. */
-            if (ntohl(oflpi->buffer_id) == UINT32_MAX)
+            /*if (ntohl(oflpi->buffer_id) == UINT32_MAX)
             {
                 VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ARP]: PACKET_OUT OUT_PORT %u", out_port);
                 queue_tx(rc, in_band, make_unbuffered_packet_out(payload, in_port, out_port));
@@ -245,7 +283,8 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
             {
                 VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ARP]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
                 queue_tx(rc, in_band, make_buffered_packet_out(oflpi->buffer_id, in_port, out_port));
-            }
+            }*/
+            
         }
         else
         {
@@ -255,14 +294,14 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
     else if (eth->eth_type == htons(ETH_TYPE_IP) && flow.nw_dst == rconn_get_ip(in_band->controller))
     {
         is_controller_mac(eth->eth_src, in_band);
-        out_port = get_pw_local_port_number_UAH(in_band->pw);
+        //out_port = get_pw_local_port_number_UAH(in_band->pw);
         flow_tcp.dl_type = flow.dl_type;
         flow_tcp.nw_proto = flow.nw_proto;
         flow_tcp.nw_src = flow.nw_src;
         flow_tcp.nw_dst = flow.nw_dst;
         flow_tcp.in_port = flow.in_port;
         
-        queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), out_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de ida
+        //queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), out_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de ida
         memset(&flow_tcp, 0, sizeof(struct flow));
 
         //Se configura la regla inversa
@@ -271,10 +310,11 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         flow_tcp.nw_dst = flow.nw_src;
         flow_tcp.nw_src = flow.nw_dst;
         
-        queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), in_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
+        //queue_tx(rc, in_band, make_add_simple_flow(&flow_tcp, ntohl(buffer_id), in_port, IDLE_TCP_RULE_TIMEOUT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
 
         /* If the switch didn't buffer the packet, we need to send a copy. */
-        if (ntohl(oflpi->buffer_id) == UINT32_MAX)
+        /*EL forwarding del primer paquete lo hace ofdatapath a través de ARP-PATH -> evitamos repetir paquetes*/
+        /*if (ntohl(oflpi->buffer_id) == UINT32_MAX)
         {
             VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ETH_TYPE_IP]: PACKET_OUT OUT_PORT %u", out_port);
             queue_tx(rc, in_band, make_unbuffered_packet_out(payload, in_port, out_port));
@@ -283,7 +323,7 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         {
             VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ETH_TYPE_IP]: PACKET_OUT BUFFER_ID %u \tOUT_PORT %u", oflpi->buffer_id, out_port);
             queue_tx(rc, in_band, make_buffered_packet_out(oflpi->buffer_id, in_port, out_port));
-        }
+        }*/
     }
     else
     {
@@ -378,38 +418,118 @@ static struct hook_class in_band_hook_class = {
 };
 
 //Modificaciones UAH//
-void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *in_band, uint16_t of_port)
-{
-    struct in_addr local_ip;
-    struct flow arp_flow = {0}, tcp_flow = {0}, local_mac_flow = {0};
-    uint32_t local_port_no;
+void install_ARP_Controller_rules_UAH(struct rconn *local_rconn, const char * ip_controller, uint16_t of_port){
+    struct flow arp_flow = {0};
     uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
+    uint8_t Bcast_mac[ETH_ADDR_LEN] = {0xFF,0xFF,0xFF,0xFF,0xFF,0xFF};
+    //struct in_addr in_addr_ip_controller;
+    char * Ip = NULL, *aux = (char *)malloc(sizeof(char)*strlen(ip_controller));   
+
+    memcpy(aux, ip_controller, strlen(ip_controller));
+    /* get the first Ip */
+    strtok(aux, ":");
+    /* get the second Ip */
+    Ip = strtok(NULL, ":");
+    VLOG_INFO(LOG_MODULE, "[install_ARP_Controller_rules_UAH]: IP Del controller : %s", Ip);
 
     arp_flow.dl_type = htons(ETH_TYPE_ARP);
+    memcpy(arp_flow.dl_dst, &Bcast_mac, ETH_ADDR_LEN);
+    arp_flow.nw_dst = inet_addr(Ip);
+
+    VLOG_INFO(LOG_MODULE, "[install_ARP_Controller_rules_UAH]: arp_flow.nw_dst : %u", arp_flow.nw_dst);
+    
+    // Regla para procesar los paquetes ARP hacia la IP del controller.
+    rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, of_port, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); 
+    VLOG_INFO(LOG_MODULE, "[install_ARP_Controller_rules_UAH]: rconn_send -> OK");
+}
+
+void install_OpenFlow_Controller_rules_UAH(struct rconn *local_rconn, const char * ip_controller, uint16_t of_port){
+    struct flow tcp_flow = {0};
+    uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
+    //struct in_addr in_addr_ip_controller;
+    char * Ip = NULL, *aux = (char *)malloc(sizeof(char)*strlen(ip_controller));   
+
+    memcpy(aux, ip_controller, strlen(ip_controller));
+    /* get the first Ip */
+    strtok(aux, ":");
+    /* get the second Ip */
+    Ip = strtok(NULL, ":");
+    VLOG_INFO(LOG_MODULE, "[install_OpenFlow_Controller_rules_UAH]: IP Del controller : %s", Ip);
+
     tcp_flow.dl_type = htons(ETH_TYPE_IP);
     tcp_flow.nw_proto = IP_TYPE_TCP;
-    tcp_flow.tp_dst = htons(of_port);
+    //tcp_flow.tp_dst = htons(of_port);
+    tcp_flow.nw_dst = inet_addr(Ip);
+
+    VLOG_INFO(LOG_MODULE, "[install_OpenFlow_Controller_rules_UAH]: tcp_flow.nw_dst : %u", tcp_flow.nw_dst);
+    
+    // Regla para procesar los paquetes ARP hacia la IP del controller.
+    rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, of_port, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); 
+    VLOG_INFO(LOG_MODULE, "[install_OpenFlow_Controller_rules_UAH]: rconn_send -> OK");
+}
+
+void install_in_band_rules_UAH(struct rconn *local_rconn, struct in_band_data *in_band, uint16_t of_port UNUSED)
+{
+    struct in_addr local_ip;
+    struct flow arp_flow = {0}; //, tcp_flow = {0};
+    uint32_t local_port_no;
+    uint32_t buffer_id = 0xffffffff; //NO_BUFFER, para no especificar ningún flujo almacenado por el switch
+    char * name_port = NULL;
+
+
+    arp_flow.dl_type = htons(ETH_TYPE_ARP);
+    //tcp_flow.dl_type = htons(ETH_TYPE_IP);
+    //tcp_flow.nw_proto = IP_TYPE_TCP;
+    //tcp_flow.tp_dst = htons(of_port);
 
     /*¡¡¡¡Estas reglas no son necesarias para el simple_switch_13 de RYU. Tampoco son necesarias con ONOS si se utiliza RECTIVE FORWARDING.!!!!*/
-    rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); // Regla para procesar los paquetes ARP de otros switches.
-    rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); // Regla para procesar los paquetes TCP de otros switches.
-    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, 6), NULL); // Regla para procesar los paquetes TCP de otros switches.
+    /*if (get_datapath_id(in_band->pw) == 1){
+        // Regla para procesar los paquetes ARP de otros switches.
+        rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); 
+    }*/
+    // Regla para procesar los paquetes TCP de otros switches.
+    //rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); 
+    // Regla para procesar los paquetes TCP de otros switches.
+    // rconn_send(local_rconn, make_add_simple_flow(&tcp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, 6), NULL); 
 
     //Se configuran los drop para evitar bucles con el propio tráfico
+    get_pw_name(in_band->pw, name_port);
+    //VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: in_band->pw = %s", name_port);
     local_port_no = get_pw_local_port_number_UAH(in_band->pw); // Se obtiene el número del puerto físico que comparte interfaz con el puerto local.
-    VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: Puerto físico del controlador = %u", local_port_no);
+    //VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: Puerto físico del controlador = %u", local_port_no);
+    if (local_port_no == 0)
+    {
+        VLOG_INFO(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: No existe todavia puerto Local");
+        return;
+    }
     netdev_get_in4(in_band->of_device, &local_ip);
+    install_drop_rules(local_rconn, local_port_no, netdev_get_etheraddr(in_band->of_device));
+    
+    // Regla para procesar los paquetes ARP hacia la IP del controller.
+    rconn_send(local_rconn, make_add_simple_flow(&arp_flow, buffer_id, local_port_no, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL); 
+    
 
+}
+
+void install_drop_rules(struct rconn *local_rconn, uint32_t local_port_no, const uint8_t * mac)
+{
+    struct flow local_mac_flow = {0};
+    uint32_t buffer_id = 0xffffffff;
+    
     //Se instalan dos reglas para no procesar en la interfaz del puerto local los paquetes con MAC origen/destino la de la interfaz del puerto local
     //MAC ORIGEN LA DE LA INTERFAZ DEL PUERTO LOCAL
+    //VLOG_WARN(LOG_MODULE, "[install_drop_rules]: dentro");
     local_mac_flow.in_port = htonl(local_port_no);
-    memcpy(local_mac_flow.dl_src, netdev_get_etheraddr(in_band->of_device), ETH_ADDR_LEN);
+    //VLOG_WARN(LOG_MODULE, "[install_drop_rules]: local_mac_flow.in_port = %u", local_mac_flow.in_port);
+    memcpy(local_mac_flow.dl_src, mac, ETH_ADDR_LEN);
+    //VLOG_WARN(LOG_MODULE, "[install_drop_rules]: local_mac_flow.in_port = %u", local_mac_flow.dl_src[5]);
     rconn_send(local_rconn, make_add_simple_flow(&local_mac_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
-
+    VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: DROP_PRIORITY 1 instalado");
     //MAC DESTINO LA DE LA INTERFAZ DEL PUERTO LOCAL
     memset(local_mac_flow.dl_src, 0, ETH_ADDR_LEN);
-    memcpy(local_mac_flow.dl_dst, netdev_get_etheraddr(in_band->of_device), ETH_ADDR_LEN);
+    memcpy(local_mac_flow.dl_dst, mac, ETH_ADDR_LEN);
     rconn_send(local_rconn, make_add_simple_flow(&local_mac_flow, buffer_id, 0, OFP_FLOW_PERMANENT, DROP_PRIORITY), NULL);
+    VLOG_WARN(LOG_MODULE, "[INSTALL IN BAND RULES UAH]: DROP_PRIORITY 2 instalado");
 }
 
 void install_new_localport_rules_UAH(struct rconn *local_rconn, uint32_t *new_local_port, struct in_addr *local_ip UNUSED, 
@@ -481,6 +601,6 @@ void send_controller_connection_to_ofdatapath_UAH(struct rconn * local_rconn, ui
     error = rconn_send(local_rconn, packet_out, NULL);
     if (error)
         VLOG_ERR(LOG_MODULE, "ALGO HA IDO MAL EN EL ENVIO DEL ESTADO DE COMUNICACIÖN CON EL CONTROLLER, error: No se ha conectado con destino");
-    else
-        VLOG_WARN(LOG_MODULE, "La comunicación del estado se ha realizado con existo");
+    //else
+    //    VLOG_WARN(LOG_MODULE, "La comunicación del estado se ha realizado con existo");
 }

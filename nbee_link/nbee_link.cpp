@@ -566,6 +566,18 @@ extern "C" int nblink_packet_parse(struct ofpbuf * pktin,  struct ofl_match * pk
                     nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_OUT_PORTS);
                 }
             }
+            else if (protocol_Name.compare("EHDDP_NOTIFICACION")==0 && pkt_proto->ehddp_notify==NULL)
+            {
+                pkt_proto->ehddp_notify = (struct ehddp_notify *) ((uint8_t*) pktin->data + proto->Position);
+                PDMLReader->GetPDMLField(proto->Name, (char*) "NewLocalPort", proto->FirstField, &field);
+                nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_NOT_NEW);
+                PDMLReader->GetPDMLField(proto->Name, (char*) "IpLocalPort", proto->FirstField, &field);
+                nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_NOT_IP);
+                PDMLReader->GetPDMLField(proto->Name, (char*) "MACLocalPort", proto->FirstField, &field);
+                nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_NOT_MAC);
+                PDMLReader->GetPDMLField(proto->Name, (char*) "OldLocalPort", proto->FirstField, &field);
+                nblink_extract_proto_fields(pktin, field, pktout, OXM_OF_EHDDP_NOT_OLD);
+            }
             /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
             if (protocol_Name.compare("ip") == 0 && pkt_proto->ipv4 == NULL)
             {

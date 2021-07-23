@@ -121,6 +121,8 @@ handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
         conection_status_ofp_controller = (uint8_t)msg->data[0];
         ofl_msg_free_packet_out(msg, false, dp->exp);   
         VLOG_WARN(LOG_MODULE, "conection_status_ofp_controller >> %d <<", conection_status_ofp_controller);
+        //mod_local_port_change_connection_uah(dp);
+        VLOG_WARN(LOG_MODULE, "handle_control_packet_out ->  mod_local_port_change_connection_uah -> OK ");
         return 0;
     }
     /*fin modificación UAH*/
@@ -372,4 +374,52 @@ handle_control_msg(struct datapath *dp, struct ofl_msg_header *msg,
             return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BAD_TYPE);
         }
     }
+}
+
+void mod_local_port_change_connection_uah(struct datapath * dp){
+    uint8_t mac[ETH_ADDR_LEN];
+
+    VLOG_WARN(LOG_MODULE, "mod_local_port_change_connection_uah >> %d <<", bt_table.num_element);
+    if (dp != NULL){
+        if (dp->local_port != NULL && (conection_status_ofp_controller & (4 | 8 | 16)) == 0){
+            VLOG_WARN(LOG_MODULE, "Tengo que hacer cambio en el stado del puerto local");
+            //borramos el puerto local actual y la posición en la tabla
+            if (bt_table.num_element > 0){
+                mac_to_port_delete_position(&bt_table, 1);
+            }
+            if (bt_table.num_element == 0){ //no tenemos mas intentos pues borramos y esperamos
+                //Si existia un puerto local anterior le utilizamos para hacer el cambio
+                VLOG_WARN(LOG_MODULE, "no tenemos mas intentos pues borramos y esperamos");
+                //free(dp->local_port);
+                VLOG_WARN(LOG_MODULE, "No borramos el puerto local comunicado arriba solo lo ponemos como false");
+                local_port_ok = false;
+                //old_local_port = 0;
+            }
+            else{
+                //Si existia un puerto local anterior le utilizamos para hacer el cambio
+                VLOG_WARN(LOG_MODULE, "Si existia un puerto local anterior le utilizamos para hacer el cambio");
+                memcpy(mac, netdev_get_etheraddr(dp->local_port->netdev), ETH_ADDR_LEN);
+                if (configure_new_local_port_ehddp_UAH(dp, mac, old_local_port) == 1){
+                    local_port_ok = false;
+                    old_local_port = dp->local_port->conf->port_no; //guardamos el puerto anterior
+                }
+                else
+                {
+                    free(dp->local_port);
+                    local_port_ok = false;
+                    old_local_port = 0;
+                    VLOG_WARN(LOG_MODULE, "Algo no ha ido bien con la configuración del nuevo puerto local, se borra para evitar problemas");
+                }
+
+            }
+            
+            //Ahora hacemos que el ofprotocol se entere
+            //dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);         
+        }
+        else{
+            VLOG_WARN(LOG_MODULE, "Nada que Cambiar en el puerto local");
+        }
+
+    }
+    VLOG_WARN(LOG_MODULE, "mod_local_port_change_connection_uah salgo ");
 }

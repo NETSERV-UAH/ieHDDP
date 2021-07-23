@@ -216,6 +216,12 @@ ofl_msg_unpack_packet_in(struct ofp_header *src, uint8_t* buf, size_t *len, stru
 
     sp = (struct ofp_packet_in *)src;
 
+    /*OFL_LOG_WARN(LOG_MODULE, "UAH -> ntohl(sp->buffer_id): %u", ntohl(sp->buffer_id));
+    OFL_LOG_WARN(LOG_MODULE, "UAH -> ntohs(sp->total_len): %u", ntohs(sp->total_len));
+    OFL_LOG_WARN(LOG_MODULE, "UAH -> (enum ofp_packet_in_reason)sp->reason: %u", (enum ofp_packet_in_reason)sp->reason);
+    OFL_LOG_WARN(LOG_MODULE, "UAH -> sp->table_id: %d", sp->table_id);
+    OFL_LOG_WARN(LOG_MODULE, "UAH -> ntoh64(sp->cookie): %lu", ntoh64(sp->cookie));*/
+
     /* TODO: Check in_port oxm_field */
     /*if (ntohl(sp->in_port) == 0 ||
         (ntohl(sp->in_port) > OFPP_MAX &&
@@ -247,6 +253,7 @@ ofl_msg_unpack_packet_in(struct ofp_header *src, uint8_t* buf, size_t *len, stru
     ptr = buf + (sizeof(struct ofp_packet_in)-4);
     ofl_structs_match_unpack(&(sp->match),ptr, len ,&(dp->match),NULL);
     
+
     ptr = buf + ROUND_UP(sizeof(struct ofp_packet_in)-4 + dp->match->length,8) + 2;
     /* Minus padding bytes */
     *len -= 2;
@@ -1761,6 +1768,6 @@ ofl_msg_unpack(uint8_t *buf, size_t buf_len, struct ofl_msg_header **msg, uint32
     }
 
     (*msg)->type = (enum ofp_type)oh->type;
-
+    
     return 0;
 }

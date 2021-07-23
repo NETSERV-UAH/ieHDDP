@@ -106,7 +106,7 @@ static inline bool eth_addr_is_reserved(const uint8_t ea[ETH_ADDR_LEN])
 #define ETH_TYPE_MPLS_MCAST    0x8848
 
 #define ETH_TYPE_EHDDP	   0xFFAA //JAH EHDDP TYPE ETH
-#define ETH_TYPE_EHDDP_INT 0xFFBB //JAH EHDDP TYPE ETH
+#define ETH_TYPE_CHANGE_LOCAL_PORT 0xFFBB //JAH EHDDP TYPE ETH
 
 #define ETH_HEADER_LEN 14
 #define ETH_PAYLOAD_MIN 46
@@ -429,6 +429,17 @@ BUILD_ASSERT_DECL(((4*sizeof(uint8_t)) + (2*sizeof(uint64_t)) + sizeof(uint32_t)
      (sizeof(uint8_t)*EHDDP_MAX_ELEMENTS) + (sizeof(uint16_t)*EHDDP_MAX_ELEMENTS) + (sizeof(uint64_t)*EHDDP_MAX_ELEMENTS) + 
      (2*sizeof(uint32_t)*EHDDP_MAX_ELEMENTS)) == (sizeof(struct ehddp_header))); 
 
+#define LEN_EHDDP_OFP_PORT_PKT 32
+
+struct ehddp_notify{
+    uint32_t NewLocalPort;
+    uint32_t IpLocalPort;
+    uint8_t MACLocalPort[ETH_ADDR_LEN];
+    uint32_t OldLocalPort;
+}__attribute__((packed));
+
+BUILD_ASSERT_DECL((ETH_ADDR_LEN*sizeof(uint8_t)) + (3*sizeof(uint32_t)) == (sizeof(struct ehddp_notify))); 
+
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 struct protocols_std {
@@ -446,6 +457,7 @@ struct protocols_std {
    struct sctp_header     * sctp;
    struct icmp_header     * icmp;
    struct ehddp_header      * ehddp; /*Modificacion UAH Discovery hybrid topologies, JAH-*/
+   struct ehddp_notify      * ehddp_notify; /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 };
 
 static inline void

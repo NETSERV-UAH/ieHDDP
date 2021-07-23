@@ -190,6 +190,7 @@
 			<case value="0x88E7"> <nextproto proto="#pbb"/> </case>
 			<!--Modificacion JAH UAH-->
 		    <case value="0xFFAA"> <nextproto proto="#EHDDP"/> </case>
+			<case value="0xFFBB"> <nextproto proto="#EHDDP_NOTIFICACION"/> </case>
 			<!--Fin modificacion JAH UAH-->
 		</switch>
 	</encapsulation>
@@ -536,6 +537,25 @@
 						<field type="fixed" name="in_ports" longname="{0x8000 53} in_ports" size="4" showtemplate="FieldDec"/>
 						<field type="fixed" name="out_ports" longname="{0x8000 54} out_ports" size="4" showtemplate="FieldDec"/>
 					</loop>
+                </fields>
+        </format>
+</protocol>
+<protocol name="EHDDP_NOTIFICACION" longname="Notificacion eHDDP cambio local port" comment="protocol hybrid">
+        <execute-code>
+			<after when="$linklayer == 1">
+					<assign-variable name="$packetlength" value="$currentoffset"/>
+			</after>
+        </execute-code>
+
+		<field type="fixed" name="length" longname="Length" size="1" showtemplate="FieldDec"/>
+		<field type="variable" name="OptionData" longname="Option Data" expr="buf2int(length)" showtemplate="Field4BytesHex"/>
+
+        <format>
+                <fields>
+					<field type="fixed" name="NewLocalPort" longname="{0x8000 55} New Local port" size="4" showtemplate="FieldDec" />
+					<field type="fixed" name="IpLocalPort" longname="{0x8000 56} Ip Local Port" size="4" showtemplate="ip4addr"/>
+					<field type="fixed" name="MACLocalPort" longname="{0x8000 57} Local Port MAC address" size="6" showtemplate="MACaddressEth"/>
+					<field type="fixed" name="OldLocalPort" longname="{0x8000 58} Old Local port" size="4" showtemplate="FieldDec" />				
                 </fields>
         </format>
 </protocol>

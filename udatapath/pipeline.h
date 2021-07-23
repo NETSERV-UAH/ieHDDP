@@ -36,13 +36,18 @@ struct sender;
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 //vecinos globales para asi poder pasar y seleccionar envios
 
-extern struct mac_to_port neighbor_table, bt_table;
+extern struct mac_to_port bt_table, learning_table;
 extern bool local_port_ok;
 extern uint8_t conection_status_ofp_controller;
+extern struct in_addr ip_if;
+extern uint32_t old_local_port;
+extern struct in_addr ip_de_control_in_band;
 
 //tiempo de vida del controlador en la tabla de controladores debe ser mas 
 //pequeño que el tiempo entre refresco del controlador
 #define BT_TIME 20
+#define BT_TIME_PKT 1500
+#define LT_TIME 1500
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
@@ -106,6 +111,10 @@ void
 pipeline_destroy(struct pipeline *pl);
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
+/*learning function*/
+int arp_path_send_unicast(struct packet * pkt, int out_port);
+void pipeline_arp_path(struct packet *pkt);
+
 //selector de paquetes especificos del protocolo
 uint8_t select_ehddp_packets(struct packet *pkt, uint8_t resent_packet_ehddp);
 //manejador de paquetes request del protocolo

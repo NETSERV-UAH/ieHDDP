@@ -70,13 +70,16 @@ static bool use_multiple_connections = false;
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 extern struct packet *pkt_hello;
-extern struct mac_to_port bt_table;
+extern struct mac_to_port bt_table, learning_table;
+static char * ip_aux_init = NULL;
+
 
 uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
 bool local_port_ok = false;
-struct in_addr ip_in_band;
+struct in_addr ip_de_control_in_band;
 uint64_t time_init_local_port = 0;
 uint8_t conection_status_ofp_controller = 0;
+uint32_t old_local_port = 0;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -194,7 +197,9 @@ udatapath_cmd(int argc, char *argv[])
         {
             VLOG_INFO(THIS_MODULE,"Borramos los bloqueos antiguos");
             mac_to_port_delete_timeout(&bt_table);
+            mac_to_port_delete_timeout_ehddp(&bt_table);
             visualizar_tabla(&bt_table, dp->id);
+            visualizar_tabla(&learning_table, dp->id);
             deletetimeBT = time_msec();
         }
         /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
@@ -263,7 +268,6 @@ parse_options(struct datapath *dp, int argc, char *argv[])
     for (;;) {
         int indexptr;
         int c;
-        char * ip_aux = NULL;
 
         c = getopt_long(argc, argv, short_options, long_options, &indexptr);
         if (c == -1) {
@@ -278,11 +282,12 @@ parse_options(struct datapath *dp, int argc, char *argv[])
                 ofp_fatal(0, "argument to -d or --datapath-id must be "
                           "exactly 16 hex digits");
             }
-            dpid = strtoll(optarg, NULL, 12);
+            dpid = strtoll(optarg, NULL, 10);
             if (!dpid) {
                 ofp_fatal(0, "argument to -d or --datapath-id must "
                           "be nonzero");
             }
+             VLOG_INFO(THIS_MODULE,"DPID : %lu", dpid);
             dp_set_dpid(dp, dpid);
             break;
         }
@@ -318,9 +323,10 @@ parse_options(struct datapath *dp, int argc, char *argv[])
 
         /*Modificación UAH*/
         case 'I':
-            ip_aux = quitar_espacios(optarg); 
-            ip_in_band.s_addr = dp_set_ip_addr(ip_aux);
-            inet_ntop(AF_INET, &ip_in_band, ip_aux, INET_ADDRSTRLEN);
+            ip_aux_init = optarg;//quitar_espacios(optarg); 
+            VLOG_INFO(THIS_MODULE,"IP de control: %s", ip_aux_init);
+            ip_de_control_in_band.s_addr = dp_set_ip_addr(ip_aux_init);
+            inet_ntop(AF_INET, &ip_de_control_in_band, ip_aux_init, INET_ADDRSTRLEN);
             local_port = NULL;
             break;
         /*Fin modificación*/

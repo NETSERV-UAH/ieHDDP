@@ -223,14 +223,17 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
 
     eth_addr_from_uint64(pkt->dp->id, device_mac);
 
-    if (pkt->dp->local_port != NULL ){ /** Soy un nodo SDN*/
+    /** Soy un nodo SDN*/
+    
+    /*if (pkt->dp->local_port != NULL ){ 
         type_device = htons(NODO_SDN);
     }
-    else /** soy un NO SDN */
-    {
-        type_device = htons(NODO_SDN_CONFIG); 
-    } 
-
+    else { // soy un NO SDN
+        type_device = htons(NODO_SDN_CONFIG);
+    }
+    */ 
+   
+    type_device = htons(NODO_SDN_CONFIG); //siempre que modifiquemos un ehddp somos NODO_SDN_CONFIG
     if (num_elements > EHDDP_MAX_ELEMENTS || num_repetido(pkt) > 0 )
         return num_elements;
 
@@ -276,14 +279,15 @@ uint16_t num_repetido(struct packet * pkt){
 
 }
 
-struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port)
+struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, 
+    uint8_t *mac, uint32_t *old_local_port)
 {
     struct packet *pkt = NULL;
     struct ofpbuf *buf = NULL;
     uint8_t char_size;
-    struct in_addr local_ip = *ip;
+    struct in_addr local_ip = ip_de_control_in_band;
     uint8_t MAC_BC[ETH_ADDR_LEN] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-    uint16_t type_array = bigtolittle16(ETH_TYPE_EHDDP_INT); /*eHDDP type*/
+    uint16_t type_array = bigtolittle16(ETH_TYPE_CHANGE_LOCAL_PORT); /*eHDDP type*/
     
     //Creamos el buffer del paquete
     buf = ofpbuf_new(LEN_EHDDP_PORT_PKT); //(sizeof(struct Amaru_header)+sizeof(struct eth_header)); //sizeof(struct eth_header));
@@ -314,33 +318,4 @@ struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32
 
     return pkt;
 }
-
-void send_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, struct in_addr *ip, uint8_t *mac, uint32_t *old_local_port)
-{
-    struct ofl_msg_packet_in msg;
-    struct packet *pkt;
-
-    pkt = create_ehddp_new_localport_packet_UAH(dp, new_local_port, port_name, ip, mac, old_local_port);
-
-    // VLOG_WARN(LOG_MODULE, "Función DP ACTION OUTPUT PORT case OFPP_CONTROLLER.");
-    msg.header.type = OFPT_PACKET_IN;
-    msg.total_len = pkt->buffer->size;
-    msg.reason = OFPR_ACTION;
-    msg.table_id = pkt->table_id;
-    msg.data = pkt->buffer->data;
-    msg.cookie = 0xffffffffffffffff;
-    msg.buffer_id = OFP_NO_BUFFER;
-    msg.data_length = pkt->buffer->size;
-
-    if (!pkt->handle_std->valid)
-    {
-        packet_handle_std_validate(pkt->handle_std);
-    }
-    /* In this implementation the fields in_port and in_phy_port
-        always will be the same, because we are not considering logical
-        ports*/
-    msg.match = (struct ofl_match_header *)&pkt->handle_std->match;
-    dp_send_message(pkt->dp, (struct ofl_msg_header *)&msg, NULL);
-}
-
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/

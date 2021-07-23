@@ -513,6 +513,10 @@ enum oxm_ofb_match_fields {
     OFPXMT_OFB_EHDDP_IDS          = 52, /* MAC ADDRESS of the devices */
     OFPXMT_OFB_EHDDP_IN_PORTS     = 53, /* In port of devices */
     OFPXMT_OFB_EHDDP_OUT_PORTS    = 54, /* Out port of devices */
+    OFPXMT_OFB_EHDDP_NOT_NEW      = 55, /* Type of the end device of the path */
+    OFPXMT_OFB_EHDDP_TYPE_NOT_IP  = 56, /* MAC ADDRESS of the devices */
+    OFPXMT_OFB_EHDDP_NOT_MAC      = 57, /* In port of devices */
+    OFPXMT_OFB_EHDDP_NOT_OLD      = 58, /* Out port of devices */
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 };
 
@@ -2405,6 +2409,20 @@ OFP_ASSERT(sizeof(struct ofp_async_config) == 32);
 #define OXM_OF_EHDDP_IDS_W           OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_IDS,8) 
 #define OXM_OF_EHDDP_IN_PORTS_W       OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_IN_PORTS,4)  
 #define OXM_OF_EHDDP_OUT_PORTS_W      OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_OUT_PORTS,4)
+
+#define OXM_OF_EHDDP_NOT_NEW         OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_NEW,4)
+#define OXM_OF_EHDDP_NOT_IP    OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_TYPE_NOT_IP,6)
+#define OXM_OF_EHDDP_NOT_MAC            OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_MAC,4) 
+#define OXM_OF_EHDDP_NOT_OLD       OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_OLD,4)  
+
+#define OXM_OF_EHDDP_NOT_NEW_W         OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_NEW,4)
+#define OXM_OF_EHDDP_NOT_IP_W    OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_TYPE_NOT_IP,6)
+#define OXM_OF_EHDDP_NOT_MAC_W           OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_MAC,4) 
+#define OXM_OF_EHDDP_NOT_OLD_W       OXM_HEADER(0x8000,OFPXMT_OFB_EHDDP_NOT_OLD,4)  
+
+
+
+
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 

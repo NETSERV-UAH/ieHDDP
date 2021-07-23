@@ -231,7 +231,6 @@ dpctl_transact(struct vconn *vconn, struct ofl_msg_header *req,
         ofp_fatal(0, "Error during transaction.");
     }
     error = ofl_msg_unpack(ofpbufrepl->data, ofpbufrepl->size, repl, repl_xid_p, &dpctl_exp);
-
     if (error) {
         ofp_fatal(0, "Error unpacking reply.");
     }
