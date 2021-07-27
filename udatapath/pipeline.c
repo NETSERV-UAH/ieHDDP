@@ -830,7 +830,6 @@ uint8_t handle_ehddp_reply_packets(struct packet *pkt){
 
     int out_port = 0;
     uint16_t num_elementos = 0;
-    uint16_t type_device = 1;
     uint8_t nxt_mac[ETH_ADDR_LEN] = {0};
 
     out_port = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->ehddp->nxt_mac,
@@ -842,22 +841,9 @@ uint8_t handle_ehddp_reply_packets(struct packet *pkt){
     }
     else
     {
-        /*if (local_port_ok == false)
-            type_device = NODO_SDN_CONFIG; 
-        else
-            type_device = NODO_SDN;*/
-        
-        type_device = NODO_SDN_CONFIG; //siempre que modifiquemos un ehddp somos NODO_SDN_CONFIG
 
         VLOG_INFO(LOG_MODULE, "Update the eHDDP reply packet: in-port: %d | out-port %d | type_device: %d",
-            pkt->in_port, out_port, type_device);
-
-        /*Si que puede pasar que me llegue un reply por el puerto de salida ya que puedo estar conectado a otro SDN */
-        /*if (pkt->in_port == out_port){
-            VLOG_INFO(LOG_MODULE, "ERROR!!! El puerto de entrada y salida no pueden ser iguales para un paquete unicast");
-            visualizar_tabla(&bt_table, pkt->dp->id);
-            return 0;
-        }*/
+            pkt->in_port, out_port, NODO_SDN_CONFIG);
 
         if (mac_to_port_found_mac_position(&bt_table, 1, nxt_mac) < 0) //obtenemos la mac del controller
         {
@@ -882,13 +868,11 @@ uint8_t handle_ehddp_reply_packets(struct packet *pkt){
 
 void creator_ehddp_reply_packets(struct packet *pkt){
     struct packet *pkt_reply = NULL;
-    uint16_t type_device = 0x02;
     uint8_t num_devices = 0x01;
 
     /*Siempre que actualize/cree un ehddp son un nodo NODO_SDN_CONFIG*/
-    type_device = NODO_SDN_CONFIG; 
     pkt_reply = create_ehddp_reply_packet(pkt->dp, pkt->handle_std->proto->eth->eth_src,pkt->in_port,
-        pkt->in_port, type_device, num_devices,
+        pkt->in_port, NODO_SDN_CONFIG, num_devices,
         pkt->handle_std->proto->ehddp->num_sec, pkt->handle_std->proto->ehddp->num_ack, pkt->handle_std->proto->ehddp->time_block);
     VLOG_INFO(LOG_MODULE, "create_ehddp_reply_packet OK");
     //envio el paquete por el puerto de entrada
