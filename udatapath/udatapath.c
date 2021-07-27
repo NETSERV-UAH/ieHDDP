@@ -108,7 +108,7 @@ udatapath_cmd(int argc, char *argv[])
     int error;
     int i;
     /*Modificacion UAH eHDDP, JAH-*/
-    uint64_t deletetimeBT = 0, time_init_uah = 0;
+    uint64_t deletetimeBT = 0; //, time_init_uah = 0;
     /*Fin Modificacion eHDDP, JAH-*/
 
     set_program_name(argv[0]);
@@ -177,12 +177,11 @@ udatapath_cmd(int argc, char *argv[])
     die_if_already_running();
     daemonize();
 
-    if (get_dp_local_port_number_UAH(dp)) 
+    /*if (get_dp_local_port_number_UAH(dp)) 
     {
         //iniciamos el temporaizados
         time_init_uah = time_msec();
-        VLOG_INFO(THIS_MODULE, "time_init_uah:%ld\n", (long)time_init_uah);
-    }
+    }*/
     
     time_init_local_port = 0;
 
@@ -195,11 +194,10 @@ udatapath_cmd(int argc, char *argv[])
         /*Modificacion UAH Discovery hybrid topologies, JAH-*/
         if((time_msec() - deletetimeBT >= TIME_DELETE_BT*1000) && dp->id != 1)
         {
-            VLOG_INFO(THIS_MODULE,"Borramos los bloqueos antiguos");
             mac_to_port_delete_timeout(&bt_table);
             mac_to_port_delete_timeout_ehddp(&bt_table);
-            visualizar_tabla(&bt_table, dp->id);
-            visualizar_tabla(&learning_table, dp->id);
+            //visualizar_tabla(&bt_table, dp->id);
+            //visualizar_tabla(&learning_table, dp->id);
             deletetimeBT = time_msec();
         }
         /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/

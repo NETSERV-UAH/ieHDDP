@@ -178,7 +178,7 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
                     return ;
                 }
                 //UAH sino es un ehddp y no tenemos reglas lo enviamos nosotros por donde sabemos
-                VLOG_DBG(LOG_MODULE, "No es un paquete eHDDP asi que pasamos a la función de learning.");
+                //VLOG_DBG(LOG_MODULE, "No es un paquete eHDDP asi que pasamos a la función de learning.");
                 pipeline_arp_path(pkt);
             }
             /* OpenFlow 1.3 default behavior on a table miss */
@@ -720,7 +720,7 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
 
     if((pkt->handle_std->proto->eth->eth_type== ETH_TYPE_EHDDP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP_INV) && 
         (pkt->dp->id > 1 && pkt->dp->id < 1000)){
-        VLOG_WARN(LOG_MODULE, "UAH -> eHDDP detectado miramos si tenemos que crear local port");
+        //VLOG_WARN(LOG_MODULE, "UAH -> eHDDP detectado miramos si tenemos que crear local port");
         if (pkt->handle_std->proto->ehddp->opcode == 1)
         {
             result = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->handle_std->proto->ehddp->num_sec);
@@ -795,7 +795,7 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt, uint8_t resent_packet_e
             pkt->handle_std->proto->ehddp->num_sec);
         send_ehddp_packet = 1;
     }
-    else if ((resent_packet_ehddp == 0 && (conection_status_ofp_controller & (4 | 8 | 16)) == 0))
+    else if ((resent_packet_ehddp == 0 )) //&& (conection_status_ofp_controller & (4 | 8 | 16)) == 0))
     {
         /* contestamos con reply */
         send_ehddp_packet = 2;
@@ -906,7 +906,7 @@ void pipeline_arp_path(struct packet *pkt)
     int puerto_mac = 0;
     struct packet * cpy_pkt;
     
-    VLOG_INFO(LOG_MODULE, "Estamos dentro del proceso de learning");
+    //VLOG_INFO(LOG_MODULE, "Estamos dentro del proceso de learning");
 
     if (!pkt)
     {
@@ -929,18 +929,18 @@ void pipeline_arp_path(struct packet *pkt)
 
 	if (pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) 
 	{
-        VLOG_INFO(LOG_MODULE, "Es un paquete ARP para hacer el learning");
+        //VLOG_INFO(LOG_MODULE, "Es un paquete ARP para hacer el learning");
         puerto_mac = mac_to_port_found_port(&learning_table, pkt->handle_std->proto->eth->eth_src, 0);
-        VLOG_INFO(LOG_MODULE, "Puerto_mac = %d | pkt->in_port = %d", puerto_mac, pkt->in_port);
+        //VLOG_INFO(LOG_MODULE, "Puerto_mac = %d | pkt->in_port = %d", puerto_mac, pkt->in_port);
         if (eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst) || eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
         {
-            VLOG_INFO(LOG_MODULE, "Es un paquete ARP-Request del tipo broadcast");
+            //VLOG_INFO(LOG_MODULE, "Es un paquete ARP-Request del tipo broadcast");
 			if (puerto_mac == -1){
-                VLOG_INFO(LOG_MODULE, "No conozco Puerto anterior");
+                //VLOG_INFO(LOG_MODULE, "No conozco Puerto anterior");
 				mac_to_port_add(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, BT_TIME_PKT, 0);
             }
 			else if (puerto_mac == pkt->in_port){
-                VLOG_INFO(LOG_MODULE, "SI conozco Puerto anterior y es el mismo que el que tengo");
+                //VLOG_INFO(LOG_MODULE, "SI conozco Puerto anterior y es el mismo que el que tengo");
 				mac_to_port_time_refresh(&learning_table, pkt->handle_std->proto->eth->eth_src, BT_TIME_PKT,0);
             }
 			/*else if (mac_to_port_check_timeout(&learning_table, pkt->handle_std->proto->eth->eth_src) != 0){
@@ -950,37 +950,39 @@ void pipeline_arp_path(struct packet *pkt)
             }*/
 			else
 			{
-                VLOG_INFO(LOG_MODULE, "Eliminamos el paquete para evitar bucles");
+                //VLOG_INFO(LOG_MODULE, "Eliminamos el paquete para evitar bucles");
 				//packet_destroy(pkt);
 				return;
 			}
             /*Se lo mandamos al controlador tambien para que tenga notificación de ello*/
             cpy_pkt = packet_clone(pkt);
             send_packet_to_controller(pkt->dp->pipeline, pkt, pkt->table_id, OFPR_NO_MATCH);
-            VLOG_INFO(LOG_MODULE, "Se ha enviado un copia del ARP al controller para su aprendizaje");
+            //VLOG_INFO(LOG_MODULE, "Se ha enviado un copia del ARP al controller para su aprendizaje");
             packet_destroy(cpy_pkt);
-            VLOG_INFO(LOG_MODULE, "Se guarda correctamente todo pasamos a hacer el broadcast del ARP");
+            //VLOG_INFO(LOG_MODULE, "Se guarda correctamente todo pasamos a hacer el broadcast del ARP");
 			dp_actions_output_port(pkt, OFPP_FLOOD, pkt->out_queue, pkt->out_port_max_len, 0xffffffffffffffff);
         }
         else 
         {
-            VLOG_INFO(LOG_MODULE, "El paquete no es broadcast");
+            //VLOG_INFO(LOG_MODULE, "El paquete no es broadcast");
             if ((pkt->handle_std->proto->arp->ar_op/256) == 2 && puerto_mac == -1){
-                VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero NO conocemos un puerto anterior"); 
+                //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero NO conocemos un puerto anterior"); 
                 mac_to_port_add(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
             }
             else if ((pkt->handle_std->proto->arp->ar_op/256) == 2)
             {
-                VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero conocemos un puerto anterior"); 
+                //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero conocemos un puerto anterior"); 
                 if(mac_to_port_check_timeout(&learning_table, pkt->handle_std->proto->eth->eth_src) == 1)
                     mac_to_port_update(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
                 else
                     mac_to_port_time_refresh(&learning_table, pkt->handle_std->proto->eth->eth_src,LT_TIME, 0); 
             } 
-            VLOG_INFO(LOG_MODULE, "Todo actualizado de forma correcta");         
+            //VLOG_INFO(LOG_MODULE, "Todo actualizado de forma correcta");         
        }
     }
+    //VLOG_INFO(LOG_MODULE, "Buscamos puerto de salida");
     puerto_mac = mac_to_port_found_port(&learning_table, pkt->handle_std->proto->eth->eth_dst, 0);
+    //VLOG_INFO(LOG_MODULE, "sacamos paquete unicast por puerto = %d", puerto_mac);
     arp_path_send_unicast(pkt, puerto_mac);
 
     return;
@@ -988,7 +990,7 @@ void pipeline_arp_path(struct packet *pkt)
 
 int arp_path_send_unicast(struct packet * pkt, int out_port)
 {
-	if (out_port != -1)
+	if (out_port > -0)
 	{
 		if(pkt->dp->ports[out_port].conf->state == OFPPS_LIVE)
 		{
