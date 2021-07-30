@@ -119,19 +119,30 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
     }
 
     /*Modificacion UAH Discovery hybrid topologies, JAH-*/
-    if (pkt->handle_std->proto->udp && eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
+    if ((pkt->handle_std->proto->udp && eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst)) || 
+        (pkt->handle_std->proto->eth->eth_type == 56710))
     {
         packet_destroy(pkt);
         return ;
     }
 
     resent_packet_ehddp = ehddp_mod_local_port (pkt);
+    
+    /*if ((pkt->handle_std->proto->eth->eth_type== ETH_TYPE_EHDDP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP_INV) 
+        && (pkt->dp->id > 1)){
+            //Quiero manejar diferente los reply a ver que pasa
+            VLOG_INFO(LOG_MODULE, "pkt->handle_std->proto->ehddp->opcode = %d", pkt->handle_std->proto->ehddp->opcode);
+        if (pkt->handle_std->proto->ehddp->opcode == 2){
+            VLOG_INFO(LOG_MODULE, "Entro en code 2");
+            handle_ehddp_reply_packets(pkt);
+        }
+    }*/
+
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
-   	if ((pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) && 
-       eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst)) 
+   	if ((pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV)) 
 	{
-        if ((pkt->handle_std->proto->arp->ar_op/256) == 1){
+        if (htons(pkt->handle_std->proto->arp->ar_op) == 1){
             /*Aumentamos el estadisitico de ARP Request*/
             num_pkt_arp_req++;
         }
@@ -139,10 +150,12 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
             /*Aumentamos el estadisticio de ARP Reply*/
              num_pkt_arp_rep++;
         }
-        //necesitamos tratar los bcast de forma distinta para poder comunicar con el controller
-        pipeline_arp_path(pkt);
-        packet_destroy(pkt);
-        return ;
+        if(eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst)){
+            //necesitamos tratar los bcast de forma distinta para poder comunicar con el controller
+            pipeline_arp_path(pkt);
+            packet_destroy(pkt);
+            return ;
+        }
     }
     
     next_table = pl->tables[0];
@@ -186,11 +199,6 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
             /*Tratamos los paquetes del protocolo, empezando por el Request (Broadcast)*/
             if (select_ehddp_packets(pkt, resent_packet_ehddp) == 1)
             {
-                if(pkt->handle_std->proto->eth->eth_type == 56710)
-                {
-                    packet_destroy(pkt);
-                    return ;
-                }
                 //UAH sino es un ehddp y no tenemos reglas lo enviamos nosotros por donde sabemos
                 //VLOG_DBG(LOG_MODULE, "No es un paquete eHDDP asi que pasamos a la función de learning.");
                 pipeline_arp_path(pkt);
@@ -790,7 +798,7 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
                     pkt->handle_std->proto->ehddp->num_sec);
             }
         }
-        else if (pkt->handle_std->proto->ehddp->opcode == 2)
+        else
         {
             /*Aumentamos el estadistico de ehddp reply*/
             num_pkt_ehddp_rep++;
@@ -996,7 +1004,7 @@ void pipeline_arp_path(struct packet *pkt)
 
 int arp_path_send_unicast(struct packet * pkt, int out_port)
 {
-	if (out_port > -0)
+	if (out_port > 0)
 	{
 		if(pkt->dp->ports[out_port].conf->state == OFPPS_LIVE)
 		{

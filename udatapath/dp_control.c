@@ -445,8 +445,14 @@ void log_uah_estadisticos(struct datapath * dp){
 	sprintf(nombre,"/tmp/Estadisticos_switch.log");
     file=fopen(nombre,"a");
 
-    sprintf(Mensaje,"%d\t%lu\t%d\t%d\t%d\t%d\n ",(int)dp->id, time_connect_to_contoller, num_pkt_ehddp_req, num_pkt_ehddp_rep, 
-        num_pkt_arp_req, num_pkt_arp_rep);
+    if (dp->id > 1){
+        sprintf(Mensaje,"%d\t%lu\t%d\t%d\t%d\t%d\n ",(int)dp->id, time_connect_to_contoller, num_pkt_ehddp_req, num_pkt_ehddp_rep, 
+            num_pkt_arp_req, num_pkt_arp_rep);
+    }
+    else
+    {
+        sprintf(Mensaje,"%d\t0\t0\t0\t0\t0\n ",(int)dp->id);
+    }
 
 	if(file != NULL)
 	{
@@ -456,8 +462,3 @@ void log_uah_estadisticos(struct datapath * dp){
 		fclose(file);
     }
 }
-
-extern int num_pkt_ehddp_req;
-extern int num_pkt_ehddp_rep;
-extern int num_pkt_arp_rep;
-extern int num_pkt_arp_req;

@@ -250,7 +250,7 @@ uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name)
 
 ofl_err dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no);
 ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
-    char *port_name, uint8_t *mac, uint32_t old_local_port, uint64_t * time_start_process);
+char *port_name, uint8_t *mac, uint32_t old_local_port, uint64_t * time_start_process);
 /*Fin eHDDP*/
 
 #endif /* DP_PORTS_H */
