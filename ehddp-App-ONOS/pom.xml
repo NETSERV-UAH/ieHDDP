@@ -19,7 +19,7 @@
 
     <groupId>uah.netserv</groupId>
     <artifactId>eHDDP_in_band</artifactId>
-    <version>3.1.2.19</version>
+    <version>3.1.2.28</version>
     <packaging>bundle</packaging>
 
     <description>ONOS OSGi bundle archetype</description>

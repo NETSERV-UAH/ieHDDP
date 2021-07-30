@@ -1,12 +1,12 @@
 Manifest-Version: 1.0
-Bnd-LastModified: 1627029991653
+Bnd-LastModified: 1627657097459
 Build-Jdk: 1.8.0_292
 Built-By: arppath
 Bundle-Description: ONOS OSGi bundle archetype
 Bundle-ManifestVersion: 2
 Bundle-Name: eHDDP_in_band
 Bundle-SymbolicName: uah.netserv.eHDDP_in_band
-Bundle-Version: 3.1.2.19
+Bundle-Version: 3.1.2.28
 Created-By: Apache Maven Bundle Plugin
 Export-Package: DHTapp;uses:="org.onlab.packet,org.onosproject.core,org.
  onosproject.net,org.onosproject.net.config,org.onosproject.net.config.b

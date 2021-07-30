@@ -165,7 +165,8 @@ public class DHTproviderdevices implements DeviceProvider {
                 case TYPE_SDN_NO_CONFIG:
                     try {
                         uri = CreateorUpdateDevice(dpsv, dpr, "sdn", "1.0.0",
-                                Mac, "Switch SDN using autoconfig process", Device.Type.SWITCH, Mac, Mac, configureNodes);
+                                Mac, "University of Alcala, Stanford University, Ericsson Research and CPqD Research",
+                                Device.Type.SWITCH, Mac, Mac, configureNodes);
                         //para ahorrar tiempo ahora comprobamos sus puertos
                         checkportofdevice(dpsv, dsv, Packet_dht, uri, pos);
                     } catch (Exception e) {

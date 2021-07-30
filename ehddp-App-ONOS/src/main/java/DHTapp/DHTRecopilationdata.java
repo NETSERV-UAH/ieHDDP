@@ -94,7 +94,7 @@ public class DHTRecopilationdata {
 
         try
         {
-            fichero = new FileWriter("/home/arppath/data-onos-hddp/topology-onos"+String.valueOf(num_sec)+".txt", true);
+            fichero = new FileWriter("/home/arppath/data-onos-hddp/topology-onos-"+String.valueOf(num_sec)+".txt", true);
             pw = new PrintWriter(fichero);
             Map<String, List<String>> sortedtopology = new TreeMap<>(topology);
 

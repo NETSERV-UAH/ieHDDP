@@ -72,13 +72,13 @@ public class DHTproviderlink implements LinkProvider{
         LinkKey linkKey1 = LinkKey.linkKey(src, dst);
 
         /**Si estamos en modo 1 y uno de los dos enlaces es un sensor, entonces el enlace no es durable */
-        if ((!srcId.contains("sw") && !srcId.contains("of")) || (!dstId.contains("sw") && !dstId.contains("of"))){
+        if ((srcId.contains("sw") || srcId.contains("of")) && (dstId.contains("sw") || dstId.contains("of"))){
             /** Le comunicaciones que es bidireccional y no es durable */
-            link_config = new BasicLinkConfig(linkKey1).isBidirectional(false).isDurable(false);
+            link_config = new BasicLinkConfig(linkKey1).isBidirectional(true).isDurable(true);
         }
         else{
             /** Si por el contrario estamos en modo 0 o se trata de un enlace entre nodos, si podemos decir que es durable */
-            link_config = new BasicLinkConfig(linkKey1).isBidirectional(true).isDurable(true);
+            link_config = new BasicLinkConfig(linkKey1).isBidirectional(true).isDurable(false);
         }
 
         LinkDescription ld1 = new DefaultLinkDescription(linkKey1.src(), linkKey1.dst(), Link.Type.DIRECT, insertannotation(link_config));
@@ -164,7 +164,12 @@ public class DHTproviderlink implements LinkProvider{
 
         /**Si uno de los dos enlaces es un sensor, entonces el enlace no es durable */
         //if ( !(srcDpId.contains("sw") || srcDpId.contains("of")) || !(dstDpId.contains("sw") || dstDpId.contains("of"))){
-        if (srcDpId.contains("sw") || dstDpId.contains("sw")){
+        if ((srcDpId.contains("sw") || srcDpId.contains("of")) && (srcDpId.contains("sw") || srcDpId.contains("of"))){
+            /** Si se trata de un enlace entre nodos, si podemos decir que es durable */
+            link_config_scr_to_dst = new BasicLinkConfig(linkKey1).isBidirectional(true).isDurable(false);
+            link_config_dst_to_scr = new BasicLinkConfig(linkKey2).isBidirectional(true).isDurable(false);
+        }
+        else{
             /** Le comunicaciones que es bidireccional y no es durable */
             if (configuredLinks.contains(linkKey1))
                 configuredLinks.remove(linkKey1);
@@ -183,11 +188,6 @@ public class DHTproviderlink implements LinkProvider{
                 link_config_scr_to_dst.isBidirectional(false);
                 link_config_dst_to_scr.isBidirectional(false);
             }
-        }
-        else{
-            /** Si se trata de un enlace entre nodos, si podemos decir que es durable */
-            link_config_scr_to_dst = new BasicLinkConfig(linkKey1).isBidirectional(true).isDurable(false);
-            link_config_dst_to_scr = new BasicLinkConfig(linkKey2).isBidirectional(true).isDurable(false);
         }
 
         /** Genero el linkkey entre ambos equipos */
@@ -254,6 +254,7 @@ public class DHTproviderlink implements LinkProvider{
             switch(types_divices[num])
             {
                 case 1: /* SDN case */
+                case 3: /* Configure SDN Proces case */
                     dstDpid[0] = "of:"+parser_idpacket_to_iddevice(Id_Devices[num]);
                     bidirectional = false;
                     break;
@@ -273,6 +274,7 @@ public class DHTproviderlink implements LinkProvider{
             else {
                 switch (types_divices[num + 1]) {
                     case 1: /* NO SDN case */
+                    case 3: /* Configure SDN Proces case */
                         dstDpid[1] = "of:" + parser_idpacket_to_iddevice(Id_Devices[num + 1]);
                         break;
                     case 2:

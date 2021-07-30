@@ -14,10 +14,10 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="eHDDP_in_band-3.1.2.19">
-    <feature name="eHDDP_in_band" version="3.1.2.19"
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.0" name="eHDDP_in_band-3.1.2.28">
+    <feature name="eHDDP_in_band" version="3.1.2.28"
              description="ONOS OSGi bundle archetype.">
         <feature>onos-api</feature>
-        <bundle>mvn:uah.netserv/eHDDP_in_band/3.1.2.19</bundle>
+        <bundle>mvn:uah.netserv/eHDDP_in_band/3.1.2.28</bundle>
     </feature>
 </features>

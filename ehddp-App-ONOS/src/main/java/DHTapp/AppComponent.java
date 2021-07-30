@@ -264,8 +264,6 @@ public class AppComponent{
                     requestIntercepts();
 
                     /**Aumentamos el estadistico*/
-                    if (DHTdevices.Nodos_SDN.size() < num_dev_sdn_file)
-                        Num_packet_out++;
                     Num_packet_out_general++;
 
                     /** redescubrimos los enlaces */
@@ -284,22 +282,15 @@ public class AppComponent{
                     if (!DHTdevices.Nodos_SDN.contains(device.id().toString())) {
                         log.info("Inserting device with id " + device.id());
                         DHTdevices.Nodos_SDN.add(device.id().toString());
+                        DHTdevices.time_sdn_conection = System.currentTimeMillis();
                     }
                 }
                 else {
-                    Num_dev_Non_sdn++;
                     Num_dev_Non_sdn_general++;
                 }
 
                 /* Inicializa el numero de SDN en eHDDP */
                 DHTdevices.set_num_SDN_devices(DHTdevices.Nodos_SDN.size());
-
-                /*tiempo de inicio*/
-                if (time_init_inband_realizada == 0) {
-                    start_process_time = System.currentTimeMillis();
-                    time_init_inband_realizada = 1;
-                }
-
                 start_process_time_general = System.currentTimeMillis();
             }
             try {
@@ -316,38 +307,7 @@ public class AppComponent{
                             Num_packet_out_general, Num_packet_in_general, Num_packet_data_general, Num_dev_sdn, Num_dev_Non_sdn,
                             num_sensores, configuredLinks.size(), num_nodos_file, num_links_file, configureNodes.size(),
                             "datps_onos_inband_completo.txt");
-
-                    //Para estas medidas no necesitamos los enlaces
-                    //datalog.links_topo(configuredLinks, timestamp_hddp);
-
-                    Num_packet_out_general = 0;
-                    Num_packet_in_general = 0;
-                    Num_packet_data_general = 0;
-                    Num_dev_Non_sdn_general = 0;
-                    Num_dev_sdn_general = 0;
-                    start_process_time_general = 0;
-                    end_process_time_general = 0;
-
                 }
-
-                log.info("###############UAH->num_dev_sdn_file = {} || Num_dev_sdn = {}", num_dev_sdn_file, Num_dev_sdn);
-
-                if (Num_dev_sdn >= num_dev_sdn_file && medida_realizada == 0){
-                    medida_realizada = 1;
-                    log.info("###############UAH->configuredLinks -> \n {}",configuredLinks);
-
-                    datalog.Data_generic(timestamp_hddp, (int) (DHTdevices.time_sdn_conection - start_process_time),
-                            Num_packet_out, Num_packet_in, Num_packet_data, Num_dev_sdn, Num_dev_Non_sdn, num_sensores,
-                            configuredLinks.size(), num_nodos_file, num_links_file, configureNodes.size(), "datos-onos-inband.txt");
-
-
-                    Num_packet_out = Num_packet_in = Num_packet_data = 0;
-                    start_process_time = end_process_time = 0;
-                    DHTdevices.set_num_SDN_devices(0);
-
-                }
-                else if( medida_realizada == 1)
-                    log.info("###############UAH->LA MEDIDA HA SIDO REALIZADA CORRECTAMENTE");
                 else{
                     log.info("###############UAH->MEDIDA no válida -> num Num_dev_sdn : {} | num_dev_sdn_file: {} | diff time : {}",
                             Num_dev_sdn, num_dev_sdn_file, (int)(DHTdevices.time_sdn_conection-start_process_time));
@@ -361,11 +321,14 @@ public class AppComponent{
                 link_sdn_nodes.clear();
                 Time_delete = System.currentTimeMillis() + TIME_DELETE;
                 configureNodes.clear();
-                /** Estos solo cuando todos los SDN estan descubiertos*/
-                if(medida_realizada == 1) {
-                    Num_dev_sdn = Num_dev_Non_sdn = 0;
-                    DHTdevices.Nodos_SDN.clear();
-                }
+                Num_packet_out_general = 0;
+                Num_packet_in_general = 0;
+                Num_packet_data_general = 0;
+                Num_dev_Non_sdn_general = 0;
+                Num_dev_sdn_general = 0;
+                start_process_time_general = 0;
+                end_process_time_general = 0;
+
 
             } catch (InterruptedException e) {
                 log.error("DHTAPP ERROR :Interrupted exception");
@@ -456,12 +419,6 @@ public class AppComponent{
                     }
                     /** Si llega un request y NO es un enlace directo entre dos SDN*/
                     else {
-                        /**Si recibimos un Request, debemos contar 1 paquete mas ya que el ultimo enlace no le contariamos*/
-                        if (DHTdevices.Nodos_SDN.size() < num_dev_sdn_file) {
-                            /**Aumentamos el estadistico propio de in-band */
-                            Num_packet_data++;
-                            Num_packet_out++;
-                        }
                         /**Aumentamos el estadistico de generales */
                         Num_packet_data_general++;
                         Num_packet_out_general++;
@@ -485,8 +442,6 @@ public class AppComponent{
                 else{
                     /**Sabemos que por cada device que salta un paquete es un paquete por la red*/
                     Num_packet_data_general = Num_packet_data_general + num_hops;
-                    if (DHTdevices.Nodos_SDN.size() < num_dev_sdn_file)
-                        Num_packet_data = Num_packet_data + num_hops;
 
                     /**Enviamos ACK para que el proceso de descubrimiento siga,
                      * solo si esta activa la opcion o si viene de request*/
@@ -591,9 +546,7 @@ public class AppComponent{
         log.debug("Enviamos paquete ACK");
         /** no vamos a aumentar este numero ya que en cableado no debe salir */
         /**Aumentamos el estadistico de packet out */
-        //Num_packet_out_general++;
-        //if (DHTdevices.Nodos_SDN.size() < num_dev_sdn_file)
-        //    Num_packet_out++;
+        Num_packet_out_general++;
         /** Enviamos el paquete creado utilizando la id del switch */
         sendPacketwithID(deviceId, port_number, ACK_packet);
     }
