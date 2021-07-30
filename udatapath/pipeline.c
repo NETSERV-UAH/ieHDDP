@@ -131,6 +131,14 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
    	if ((pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) && 
        eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst)) 
 	{
+        if ((pkt->handle_std->proto->arp->ar_op/256) == 1){
+            /*Aumentamos el estadisitico de ARP Request*/
+            num_pkt_arp_req++;
+        }
+        else{
+            /*Aumentamos el estadisticio de ARP Reply*/
+             num_pkt_arp_rep++;
+        }
         //necesitamos tratar los bcast de forma distinta para poder comunicar con el controller
         pipeline_arp_path(pkt);
         packet_destroy(pkt);
@@ -933,11 +941,6 @@ void pipeline_arp_path(struct packet *pkt)
 
 	if (pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) 
 	{
-        //VLOG_INFO(LOG_MODULE, "Es un paquete ARP para hacer el learning");
-        if ((pkt->handle_std->proto->arp->ar_op/256) == 1){
-            /*Aumentamos el estadisitico de ARP Request*/
-            num_pkt_arp_req++;
-        }
         puerto_mac = mac_to_port_found_port(&learning_table, pkt->handle_std->proto->eth->eth_src, 0);
         //VLOG_INFO(LOG_MODULE, "Puerto_mac = %d | pkt->in_port = %d", puerto_mac, pkt->in_port);
         if (eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst) || eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
@@ -967,8 +970,6 @@ void pipeline_arp_path(struct packet *pkt)
         {
             //VLOG_INFO(LOG_MODULE, "El paquete no es broadcast");
             if ((pkt->handle_std->proto->arp->ar_op/256) == 2){
-                /*Aumentamos el estadisticio de ARP Reply*/
-                num_pkt_arp_rep++;
                 if (puerto_mac == -1){
                     //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero NO conocemos un puerto anterior"); 
                     mac_to_port_add(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
