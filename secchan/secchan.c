@@ -57,6 +57,8 @@
 #include "../oflib/ofl-print.h"
 #include "../oflib/ofl-structs.h"
 
+uint64_t time_start_process = 0;
+
 bool in_band_rules = false; // Flag que indica si se han instalado las reglas in-band
 uint16_t of_port = 0;
 /////
@@ -117,7 +119,7 @@ int main(int argc, char *argv[])
     uint32_t local_port = 0, local_port_ant = 0;
 
     /*Modificacion UAH*/
-    char * status_remote_rconn, *status_remote_rconn_ant;
+    bool controller_connected_comunicate= false;
     /*Fin modificacion UAH*/
 
     set_program_name(argv[0]);
@@ -239,31 +241,20 @@ int main(int argc, char *argv[])
         rate_limit_start(&secchan, &s, switch_status, remote_rconn);
     }
 
-    /*Modificacion UAH*/
-    status_remote_rconn_ant = malloc(sizeof(char)*strlen(rconn_get_state(remote_rconn)));
-    status_remote_rconn = malloc(sizeof(char)*strlen(rconn_get_state(remote_rconn)));
-    memcpy(status_remote_rconn_ant, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
-    memcpy(status_remote_rconn, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
-    if (rconn_is_connected(local_rconn)) //solo lo envío si existe conexión con el puerto local
-        send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
-    /*Fin Modificacion*/
 
-    /*Modificacion UAH JAH*/
     do
     {
         struct relay *r, *n;
         size_t i;
 
         /*Modificacion UAH*/
-        memcpy(status_remote_rconn, rconn_get_state(remote_rconn), strlen(rconn_get_state(remote_rconn)));
-        if (strcmp(status_remote_rconn_ant, status_remote_rconn) != 0){
-            //Solo notificamos el cambio de estado del puerto por simplicidad
-            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: Cambio de estado de la conexión con el controlador pasa de >> %s << a >> %s <<"
-            //    , status_remote_rconn_ant, status_remote_rconn);
-            memcpy(status_remote_rconn_ant, status_remote_rconn, strlen(rconn_get_state(remote_rconn)));
-            if (rconn_is_connected(local_rconn)) //solo lo envío si existe conexión con el puerto local
-                send_controller_connection_to_ofdatapath_UAH(local_rconn, rconn_get_state_uint8_t_uah(remote_rconn));
+        if (rconn_is_connected(local_rconn) && rconn_is_connected(remote_rconn) && !controller_connected_comunicate)
+        {
+            //enviamos el momento en que se ha detectado que esta todo conectado
+            send_controller_connection_to_ofdatapath_UAH(local_rconn, time_msec());
+            controller_connected_comunicate = true;
         }
+
         /*Fin Modificacion*/
 
         /* Do work. */
@@ -321,8 +312,6 @@ int main(int argc, char *argv[])
             }
         }
         //Modificaciones UAH//
-        //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: UAH -> Condiciones: s.in_band  = %d |  in_band_rules = %d | get_pw_local_port_number_UAH(pw) = %d",
-        //    s.in_band, in_band_rules, get_pw_local_port_number_UAH(pw));
         
         if (s.in_band && !in_band_rules && get_pw_local_port_number_UAH(pw) && rconn_is_connected(local_rconn))
         {
@@ -337,12 +326,9 @@ int main(int argc, char *argv[])
 
         local_port = get_pw_local_port_number_UAH(pw);
         if (local_port != 0 && local_port != local_port_ant){
-            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en get_ofp_port_local_UAH");
             ofp_port = get_ofp_port_local_UAH(pw, local_port);
-            //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en get_ofp_port_local_UAH -> OK");
             if (ofp_port != NULL){
                 install_drop_rules(local_rconn, get_pw_local_port_number_UAH(pw), ofp_port->hw_addr);
-                //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: entro en install_drop_rules -> OK");
             }
 
             local_port_ant = local_port;

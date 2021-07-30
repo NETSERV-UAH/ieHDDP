@@ -106,6 +106,14 @@ handle_control_set_config(struct datapath *dp, struct ofl_msg_set_config *msg,
     return 0;
 }
 
+static inline uint64_t hton64_UAH(uint64_t n) {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    return n;
+#else
+    return (((uint64_t)htonl(n)) << 32) + htonl(n >> 32);
+#endif
+}
+
 /* Handles packet out messages. */
 static ofl_err
 handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
@@ -123,6 +131,16 @@ handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
         //VLOG_WARN(LOG_MODULE, "conection_status_ofp_controller >> %d <<", conection_status_ofp_controller);
         //mod_local_port_change_connection_uah(dp);
         //VLOG_WARN(LOG_MODULE, "handle_control_packet_out ->  mod_local_port_change_connection_uah -> OK ");
+        return 0;
+    }
+    if (msg->data_length == sizeof(uint64_t)) //si tenemos un mensaje del tamaño de un uint64_t es nuestra marca temporal
+    {
+        memcpy(&time_connect_to_contoller, msg->data, sizeof(uint64_t));
+        ofl_msg_free_packet_out(msg, false, dp->exp);
+        VLOG_WARN(LOG_MODULE, "Instante de Conexion al controlador >> %lu <<", time_connect_to_contoller);
+        log_uah_estadisticos(dp);
+        if (Reply_ON)
+            send_reply_to_controller(dp);
         return 0;
     }
     /*fin modificación UAH*/
@@ -398,7 +416,7 @@ void mod_local_port_change_connection_uah(struct datapath * dp){
                 //Si existia un puerto local anterior le utilizamos para hacer el cambio
                 VLOG_WARN(LOG_MODULE, "Si existia un puerto local anterior le utilizamos para hacer el cambio");
                 memcpy(mac, netdev_get_etheraddr(dp->local_port->netdev), ETH_ADDR_LEN);
-                if (configure_new_local_port_ehddp_UAH(dp, mac, old_local_port) == 1){
+                if (configure_new_local_port_ehddp_UAH(dp, mac, old_local_port, 0) == 1){
                     local_port_ok = false;
                     old_local_port = dp->local_port->conf->port_no; //guardamos el puerto anterior
                 }
@@ -418,3 +436,28 @@ void mod_local_port_change_connection_uah(struct datapath * dp){
 
     }
 }
+
+void log_uah_estadisticos(struct datapath * dp){
+    FILE * file;
+	char nombre[100], Mensaje[1000];
+
+	VLOG_DBG_RL(LOG_MODULE, &rl, "Traza UAH -> Entro a Crear estadisticos");
+	sprintf(nombre,"/tmp/Estadisticos_switch.log");
+    file=fopen(nombre,"a");
+
+    sprintf(Mensaje,"%d\t%lu\t%d\t%d\t%d\t%d\n ",(int)dp->id, time_connect_to_contoller, num_pkt_ehddp_req, num_pkt_ehddp_rep, 
+        num_pkt_arp_rep, num_pkt_arp_req);
+
+	if(file != NULL)
+	{
+        fseek(file, 0L, SEEK_END);
+        file = fopen( nombre , "a" );
+		fputs(Mensaje, file);
+		fclose(file);
+    }
+}
+
+extern int num_pkt_ehddp_req;
+extern int num_pkt_ehddp_rep;
+extern int num_pkt_arp_rep;
+extern int num_pkt_arp_req;

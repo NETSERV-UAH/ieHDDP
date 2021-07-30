@@ -119,6 +119,12 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
     }
 
     /*Modificacion UAH Discovery hybrid topologies, JAH-*/
+    if (pkt->handle_std->proto->udp && eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
+    {
+        packet_destroy(pkt);
+        return ;
+    }
+
     resent_packet_ehddp = ehddp_mod_local_port (pkt);
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
@@ -723,6 +729,8 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
         //VLOG_WARN(LOG_MODULE, "UAH -> eHDDP detectado miramos si tenemos que crear local port");
         if (pkt->handle_std->proto->ehddp->opcode == 1)
         {
+            //Aumentamos el estadistico de ehddp
+            num_pkt_ehddp_req++;
             result = mac_to_port_found_port(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->handle_std->proto->ehddp->num_sec);
             if (result <= 0){
                 /*Guardamos la info para no liarla */
@@ -735,33 +743,36 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
                 VLOG_WARN(LOG_MODULE, "UAH -> Guardado correctamente el puerto en la tabla de eHDDP pasamos a comprobar local port");
                 /*Configuramos el puerto de entrada como nuevo puerto local*/
                 /*Modificaciones UAH*/
-                LIST_FOR_EACH (p, struct sw_port, node, &pkt->dp->port_list) {
-                    if (pkt->in_port == p->conf->port_no) // S_ACTIVE = 8 y S_IDLE = 16)
-                    {
-                        if (pkt->dp->local_port == NULL) //&& (conection_status_ofp_controller & (4 | 8 | 16)) == 0
-                        {    
-                            VLOG_WARN(LOG_MODULE, "UAH -> Entro para modificar el LOCAL PORT");
-                            //old_local_port = 0; //Como es el primero le guardo como puerto anterior
-                            eth_addr_from_uint64(pkt->dp->id, mac);
-                            error = configure_new_local_port_ehddp_UAH(pkt->dp, mac, old_local_port);
-                            if (!error) {
-                                ofp_error(error, "UAH -> failed to add local port %s", p->conf->name);
-                                if (pkt->dp->local_port != NULL)
-                                    free(pkt->dp->local_port);
-                                return -1;
-                            }
-                            old_local_port = error; // si el error es distinto de 0 es el primer puerto local
-                            /*Ahora hacemos que el ofprotocol se entere*/
-                            dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
-                            local_port_ok = false;
-                            VLOG_WARN(LOG_MODULE, "UAH -> Local port configurado listo para conectar");
-                        }
-                        else
+                if (time_no_move_local_port == 0 || time_msec() + Time_wait_local_port < time_no_move_local_port){
+                    LIST_FOR_EACH (p, struct sw_port, node, &pkt->dp->port_list) {
+                        if (pkt->in_port == p->conf->port_no) // S_ACTIVE = 8 y S_IDLE = 16)
                         {
-                            VLOG_WARN(LOG_MODULE, "UAH -> Existe un puerto local ya asi que no hacemos");
+                            if (pkt->dp->local_port == NULL) //&& (conection_status_ofp_controller & (4 | 8 | 16)) == 0
+                            {    
+                                VLOG_WARN(LOG_MODULE, "UAH -> Entro para modificar el LOCAL PORT");
+                                //old_local_port = 0; //Como es el primero le guardo como puerto anterior
+                                eth_addr_from_uint64(pkt->dp->id, mac);
+                                error = configure_new_local_port_ehddp_UAH(pkt->dp, mac, old_local_port, bigtolittle64(pkt->handle_std->proto->ehddp->num_sec));
+                                if (!error) {
+                                    ofp_error(error, "UAH -> failed to add local port %s", p->conf->name);
+                                    if (pkt->dp->local_port != NULL)
+                                        free(pkt->dp->local_port);
+                                    return -1;
+                                }
+                                old_local_port = error; // si el error es distinto de 0 es el primer puerto local
+                                /*Ahora hacemos que el ofprotocol se entere*/
+                                dp_ports_handle_port_mod_UAH(pkt->dp, p->conf->port_no);
+                                local_port_ok = false;
+                                VLOG_WARN(LOG_MODULE, "UAH -> Local port configurado listo para conectar");
+                            }
+                            else
+                            {
+                                VLOG_WARN(LOG_MODULE, "UAH -> Existe un puerto local ya asi que no hacemos");
+                            }
+                            break;
                         }
-                        break;
                     }
+                    time_no_move_local_port = time_msec() + Time_wait_local_port;
                 }
                 return 1;
             }
@@ -770,6 +781,11 @@ uint8_t ehddp_mod_local_port (struct packet * pkt){
                 mac_to_port_add(&bt_table, pkt->handle_std->proto->ehddp->src_mac, pkt->in_port, htonl(pkt->handle_std->proto->ehddp->time_block),
                     pkt->handle_std->proto->ehddp->num_sec);
             }
+        }
+        else if (pkt->handle_std->proto->ehddp->opcode == 2)
+        {
+            /*Aumentamos el estadistico de ehddp reply*/
+            num_pkt_ehddp_rep++;
         }
     }
     return 0;
@@ -890,7 +906,11 @@ void pipeline_arp_path(struct packet *pkt)
     int puerto_mac = 0;
     struct packet * cpy_pkt;
     
-    //VLOG_INFO(LOG_MODULE, "Estamos dentro del proceso de learning");
+    if (VLOG_IS_DBG_ENABLED(LOG_MODULE)) {
+        char *pkt_str = packet_to_string(pkt);
+        VLOG_DBG_RL(LOG_MODULE, &rl, "processing packet: %s", pkt_str);
+        free(pkt_str);
+    }
 
     if (!pkt)
     {
@@ -914,6 +934,10 @@ void pipeline_arp_path(struct packet *pkt)
 	if (pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) 
 	{
         //VLOG_INFO(LOG_MODULE, "Es un paquete ARP para hacer el learning");
+        if ((pkt->handle_std->proto->arp->ar_op/256) == 1){
+            /*Aumentamos el estadisitico de ARP Request*/
+            num_pkt_arp_req++;
+        }
         puerto_mac = mac_to_port_found_port(&learning_table, pkt->handle_std->proto->eth->eth_src, 0);
         //VLOG_INFO(LOG_MODULE, "Puerto_mac = %d | pkt->in_port = %d", puerto_mac, pkt->in_port);
         if (eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst) || eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
@@ -927,15 +951,8 @@ void pipeline_arp_path(struct packet *pkt)
                 //VLOG_INFO(LOG_MODULE, "SI conozco Puerto anterior y es el mismo que el que tengo");
 				mac_to_port_time_refresh(&learning_table, pkt->handle_std->proto->eth->eth_src, BT_TIME_PKT,0);
             }
-			/*else if (mac_to_port_check_timeout(&learning_table, pkt->handle_std->proto->eth->eth_src) != 0){
-                VLOG_INFO(LOG_MODULE, "SI conozco Puerto anterior pero esta caducado asi que actualizo");
-				mac_to_port_update(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, BT_TIME_PKT,0);
-                VLOG_INFO(LOG_MODULE, "OK 3");
-            }*/
 			else
 			{
-                //VLOG_INFO(LOG_MODULE, "Eliminamos el paquete para evitar bucles");
-				//packet_destroy(pkt);
 				return;
 			}
             /*Se lo mandamos al controlador tambien para que tenga notificación de ello*/
@@ -949,18 +966,22 @@ void pipeline_arp_path(struct packet *pkt)
         else 
         {
             //VLOG_INFO(LOG_MODULE, "El paquete no es broadcast");
-            if ((pkt->handle_std->proto->arp->ar_op/256) == 2 && puerto_mac == -1){
-                //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero NO conocemos un puerto anterior"); 
-                mac_to_port_add(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
-            }
-            else if ((pkt->handle_std->proto->arp->ar_op/256) == 2)
-            {
-                //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero conocemos un puerto anterior"); 
-                if(mac_to_port_check_timeout(&learning_table, pkt->handle_std->proto->eth->eth_src) == 1)
-                    mac_to_port_update(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
+            if ((pkt->handle_std->proto->arp->ar_op/256) == 2){
+                /*Aumentamos el estadisticio de ARP Reply*/
+                num_pkt_arp_rep++;
+                if (puerto_mac == -1){
+                    //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero NO conocemos un puerto anterior"); 
+                    mac_to_port_add(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
+                }
                 else
-                    mac_to_port_time_refresh(&learning_table, pkt->handle_std->proto->eth->eth_src,LT_TIME, 0); 
-            } 
+                {
+                    //VLOG_INFO(LOG_MODULE, "Es un ARP-Reply pero conocemos un puerto anterior"); 
+                    if(mac_to_port_check_timeout(&learning_table, pkt->handle_std->proto->eth->eth_src) == 1)
+                        mac_to_port_update(&learning_table, pkt->handle_std->proto->eth->eth_src, pkt->in_port, LT_TIME, 0);
+                    else
+                        mac_to_port_time_refresh(&learning_table, pkt->handle_std->proto->eth->eth_src,LT_TIME, 0); 
+                } 
+            }
             //VLOG_INFO(LOG_MODULE, "Todo actualizado de forma correcta");         
        }
     }

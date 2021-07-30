@@ -29,9 +29,15 @@
 
 /*Modificación UAH*/
 extern uint8_t conection_status_ofp_controller;
+extern uint64_t time_connect_to_contoller;
 extern struct in_addr ip_if;
 extern uint32_t old_local_port;
 extern struct mac_to_port bt_table, learning_table;
+extern bool Reply_ON;
+extern int num_pkt_ehddp_req;
+extern int num_pkt_ehddp_rep;
+extern int num_pkt_arp_rep;
+extern int num_pkt_arp_req;
 /*Fin modificación UAH*/
 
 struct sender;
@@ -43,6 +49,7 @@ handle_control_msg(struct datapath *dp, struct ofl_msg_header *msg,
 
 /*modificacion UAH*/
 void mod_local_port_change_connection_uah(struct datapath * dp);
+void log_uah_estadisticos(struct datapath * dp);
 /*Fin modificacion UAH*/
 
 

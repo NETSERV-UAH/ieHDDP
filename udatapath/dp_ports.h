@@ -245,12 +245,12 @@ void visualizar_tabla(struct mac_to_port *mac_port, int64_t id_datapath);
 void log_uah(const void *Mensaje, int64_t id);
 
 struct in_addr remove_local_port_UAH(struct datapath *dp);
-int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port);
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port, uint64_t time_start_process);
 uint32_t get_matching_if_port_number_UAH(struct datapath *dp, char *netdev_name);
 
 ofl_err dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no);
 ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, 
-    char *port_name, uint8_t *mac, uint32_t old_local_port);
+    char *port_name, uint8_t *mac, uint32_t old_local_port, uint64_t * time_start_process);
 /*Fin eHDDP*/
 
 #endif /* DP_PORTS_H */

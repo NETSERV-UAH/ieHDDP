@@ -158,16 +158,16 @@ call_local_port_changed_callbacks(struct port_watcher *pw)
     {
         if (name[0])
         {
-            VLOG_INFO(LOG_MODULE, "UAH -> @@@@@@ ->Identified data path local port as \"%s\".", name);
+            VLOG_INFO(LOG_MODULE, "UAH -> Identified data path local port as \"%s\".", name);
         }
         else
         {
-            VLOG_WARN(LOG_MODULE, "UAH -> @@@@@@ -> Data path has no local port.");
+            VLOG_WARN(LOG_MODULE, "UAH -> Data path has no local port.");
         }
         strcpy(pw->local_port_name, name);
     }
     else
-        VLOG_INFO(LOG_MODULE, "UAH -> @@@@@@ ->(pw->local_port_name -> \"%s\".", pw->local_port_name);
+        VLOG_INFO(LOG_MODULE, "UAH -> (pw->local_port_name -> \"%s\".", pw->local_port_name);
 
     /* Invoke callbacks. */
     for (i = 0; i < pw->n_local_cbs; i++)
@@ -292,8 +292,10 @@ port_watcher_local_packet_cb(struct relay *r, void *pw_)
                 seen[port_no] = true;
 
                 //instalamos reglas UAH
-                if (port_no == OFPP_LOCAL_AUX)
+                if (port_no == OFPP_LOCAL_AUX){
                     install_drop_rules(pw->local_rconn, get_pw_local_port_number_UAH(pw), opp->hw_addr);
+                    install_ehddp_rules(pw->local_rconn);
+                }
                 /*+++FIN+++*/
             }
 
@@ -762,6 +764,16 @@ void update_port_watcher_ports_UAH(struct port_watcher *pw)
 uint64_t get_datapath_id (struct port_watcher *pw)
 {
     return pw->datapath_id;
+}
+
+struct rconn *get_remote_rconn(struct port_watcher *pw)
+{
+    return pw->remote_rconn;
+}
+
+struct rconn *get_local_rconn(struct port_watcher *pw)
+{
+    return pw->local_rconn;
 }
 
 //+++FIN+++//

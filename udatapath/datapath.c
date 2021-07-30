@@ -181,6 +181,7 @@ dp_run(struct datapath *dp) {
         pipeline_timeout(dp->pipeline);
     }
 
+
     poll_timer_wait(100);
     dp_ports_run(dp);
 

@@ -764,13 +764,14 @@ dp_ports_handle_port_mod_UAH(struct datapath *dp, uint32_t port_no) {
     return 0;
 }
 
-ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, uint8_t *mac, uint32_t old_local_port)
+ofl_err send_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, uint8_t *mac, uint32_t old_local_port, 
+    uint64_t * time_start_process)
 {
        
     struct ofl_msg_packet_in msg;
     struct packet *pkt;
 
-    pkt = create_ehddp_new_localport_packet_UAH(dp, new_local_port, port_name, mac, &old_local_port);
+    pkt = create_ehddp_new_localport_packet_UAH(dp, new_local_port, port_name, mac, &old_local_port, time_start_process);
 
     // VLOG_WARN(LOG_MODULE, "Función DP ACTION OUTPUT PORT case OFPP_CONTROLLER.");
     msg.header.type = OFPT_PACKET_IN;
@@ -1687,7 +1688,7 @@ struct in_addr remove_local_port_UAH(struct datapath *dp)
     return ip_if;
 }
 
-int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port)
+int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32_t old_local_port, uint64_t time_start_process)
 {
     int error;
     struct sw_port *p;
@@ -1720,8 +1721,8 @@ int configure_new_local_port_ehddp_UAH(struct datapath *dp, uint8_t *mac, uint32
             }
             
             VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Enviamos informacion al OFPROTOCOL para que cambie el puerto local!!");
-            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Port = %d | name = %s ", p->conf->port_no, p->conf->name);
-            error = send_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, mac, old_local_port); 
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Port = %d | name = %s | time_start_process = %lu", p->conf->port_no, p->conf->name, time_start_process);
+            error = send_new_localport_packet_UAH(dp, p->conf->port_no, p->conf->name, mac, old_local_port, &time_start_process); 
             VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Mensaje enviado con codigo de ERROR -> %d", error);
         }
         else

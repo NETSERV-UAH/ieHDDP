@@ -70,7 +70,7 @@ packet_clone(struct packet *pkt);
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 //Tipos de dispositivos 
-#define NODO_SDN 1
+//#define NODO_SDN 1
 //#define NODO_NO_SDN 2
 #define NODO_SDN_CONFIG 3
 
@@ -82,7 +82,9 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 //funcion para actualizar los paquetes
 uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_mac);
 uint16_t num_repetido(struct packet * pkt);
-struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, uint8_t *mac, uint32_t *old_local_port);
+struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, 
+    uint8_t *mac, uint32_t *old_local_port, uint64_t * time_start_process);
+void send_reply_to_controller(struct datapath * dp);
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 #endif /* PACKET_H */

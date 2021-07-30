@@ -78,8 +78,17 @@ uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto q
 bool local_port_ok = false;
 struct in_addr ip_de_control_in_band;
 uint64_t time_init_local_port = 0;
+uint64_t time_init_cicle = 0;
 uint8_t conection_status_ofp_controller = 0;
+uint64_t time_connect_to_contoller = 0;
 uint32_t old_local_port = 0;
+uint64_t time_no_move_local_port = 0;
+int num_pkt_ehddp_req = 0;
+int num_pkt_ehddp_rep = 0;
+int num_pkt_arp_rep = 0;
+int num_pkt_arp_req = 0;
+uint64_t time_to_connect = 0;
+bool Reply_ON = false;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -285,7 +294,7 @@ parse_options(struct datapath *dp, int argc, char *argv[])
                 ofp_fatal(0, "argument to -d or --datapath-id must "
                           "be nonzero");
             }
-             VLOG_INFO(THIS_MODULE,"DPID : %lu", dpid);
+            VLOG_INFO(THIS_MODULE,"DPID : %lu", dpid);
             dp_set_dpid(dp, dpid);
             break;
         }

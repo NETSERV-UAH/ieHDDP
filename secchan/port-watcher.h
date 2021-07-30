@@ -65,6 +65,8 @@ void update_port_watcher_ports_UAH(struct port_watcher *pw);
 void get_pw_name(struct port_watcher *pw, char * name);
 struct ofp_port * get_ofp_port_local_UAH(struct port_watcher *pw, uint32_t port_no);
 uint64_t get_datapath_id (struct port_watcher *pw);
+struct rconn *get_remote_rconn(struct port_watcher *pw);
+struct rconn *get_local_rconn(struct port_watcher *pw);
 //+++FIN+++//
 
 #endif /* port-watcher.h */

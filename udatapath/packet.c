@@ -217,23 +217,12 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_mac){
     uint8_t configuration = 0b01111111;
     uint8_t device_mac [ETH_ADDR_LEN];
-    uint16_t type_device = 0, num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
+    uint16_t type_device = htons(NODO_SDN_CONFIG), num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
     uint32_t in_port = htonl(pkt->in_port), out_port_update=0;
     uint64_t id_sdn = bigtolittle64(pkt->dp->id);
 
     eth_addr_from_uint64(pkt->dp->id, device_mac);
-
-    /** Soy un nodo SDN*/
-    
-    /*if (pkt->dp->local_port != NULL ){ 
-        type_device = htons(NODO_SDN);
-    }
-    else { // soy un NO SDN
-        type_device = htons(NODO_SDN_CONFIG);
-    }
-    */ 
-   
-    type_device = htons(NODO_SDN_CONFIG); //siempre que modifiquemos un ehddp somos NODO_SDN_CONFIG
+  
     if (num_elements > EHDDP_MAX_ELEMENTS || num_repetido(pkt) > 0 )
         return num_elements;
 
@@ -280,7 +269,7 @@ uint16_t num_repetido(struct packet * pkt){
 }
 
 struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32_t new_local_port, char *port_name, 
-    uint8_t *mac, uint32_t *old_local_port)
+    uint8_t *mac, uint32_t *old_local_port, uint64_t * time_start_process)
 {
     struct packet *pkt = NULL;
     struct ofpbuf *buf = NULL;
@@ -312,10 +301,16 @@ struct packet *create_ehddp_new_localport_packet_UAH(struct datapath *dp, uint32
     ofpbuf_put(buf, mac, ETH_ADDR_LEN);
     /*Introducimos el numero del antiguo puerto local*/
     ofpbuf_put(buf, old_local_port, sizeof(uint32_t));
+    /*Introducimos el numero del antiguo puerto local*/
+    ofpbuf_put(buf, time_start_process, sizeof(uint64_t));
 
     //Creamos el buffer del paquete
     pkt = packet_create(dp, new_local_port, buf, false);
 
     return pkt;
+}
+
+void send_reply_to_controller(struct datapath * dp UNUSED){
+    return;
 }
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
