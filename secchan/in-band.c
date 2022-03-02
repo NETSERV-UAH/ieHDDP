@@ -573,7 +573,7 @@ void send_controller_connection_to_ofdatapath_UAH(struct rconn * local_rconn, ui
 
     payload = ofpbuf_new(sizeof(uint64_t));
     payload->size = sizeof(uint64_t);
-    memcpy(payload->data, &time_to_connect, sizeof(uint64_t));
+    memcpy(payload->data, &status_connection, sizeof(uint64_t));
     
     packet_out = make_packet_out(payload, 0xffffffff, OFPP_CONTROLLER, NULL, 0);
     error = rconn_send(local_rconn, packet_out, NULL);
