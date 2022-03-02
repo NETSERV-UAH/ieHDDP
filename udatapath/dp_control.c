@@ -136,11 +136,13 @@ handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
     if (msg->data_length == sizeof(uint64_t)) //si tenemos un mensaje del tamaño de un uint64_t es nuestra marca temporal
     {
         memcpy(&time_connect_to_contoller, msg->data, sizeof(uint64_t));
+        controller_connected = true;
         ofl_msg_free_packet_out(msg, false, dp->exp);
         VLOG_WARN(LOG_MODULE, "Instante de Conexion al controlador >> %lu <<", time_connect_to_contoller);
-        log_uah_estadisticos(dp);
-        if (Reply_ON)
-            send_reply_to_controller(dp);
+        if (dp->id > 1)
+            log_uah_estadisticos(dp);
+        //if (Reply_ON)
+        //    send_reply_to_controller(dp);
         return 0;
     }
     /*fin modificación UAH*/
@@ -170,7 +172,17 @@ handle_control_packet_out(struct datapath *dp, struct ofl_msg_packet_out *msg,
         /* This might be a wrong req., or a timed out buffer */
         return ofl_error(OFPET_BAD_REQUEST, OFPBRC_BUFFER_EMPTY);
     }
-    
+
+    //Si detectamos que es un eHDDP packet (el primero marcamos el instante de llegada)
+    if (log_escrito == 0 && dp->id == 1 && 
+        (pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP_INV)){
+        //time_start = time_msec();
+        time_start = current_timestamp();
+        log_uah_estadisticos(pkt->dp);
+        VLOG_WARN(LOG_MODULE, "He escrito el fichero del dp->id = 1 >> %lu <<", time_start);
+        log_escrito = 1;
+    }
+
     dp_execute_action_list(pkt, msg->actions_num, msg->actions, 0xffffffffffffffff);
 
     packet_destroy(pkt);
@@ -445,14 +457,8 @@ void log_uah_estadisticos(struct datapath * dp){
 	sprintf(nombre,"/tmp/Estadisticos_switch.log");
     file=fopen(nombre,"a");
 
-    if (dp->id > 1){
-        sprintf(Mensaje,"%d\t%lu\t%d\t%d\t%d\t%d\n ",(int)dp->id, time_connect_to_contoller, num_pkt_ehddp_req, num_pkt_ehddp_rep, 
-            num_pkt_arp_req, num_pkt_arp_rep);
-    }
-    else
-    {
-        sprintf(Mensaje,"%d\t0\t0\t0\t0\t0\n ",(int)dp->id);
-    }
+    sprintf(Mensaje,"%d\t%lu\t%lu\t%d\t%d\t%d\t%d\t%lu\t%lu\n ",(int)dp->id, time_connect_to_contoller, convergence_time, 
+        num_pkt_ehddp_req, num_pkt_ehddp_rep, num_pkt_arp_req, num_pkt_arp_rep, time_exploration, time_start);
 
 	if(file != NULL)
 	{

@@ -68,10 +68,11 @@ struct packet *
 packet_clone(struct packet *pkt);
 
 /*Modificacion UAH Discovery hybrid topologies, JAH-*/
+extern uint8_t type_device_general;
 
 //Tipos de dispositivos 
-//#define NODO_SDN 1
-//#define NODO_NO_SDN 2
+#define NODO_SDN 1
+#define NODO_NO_SDN 2
 #define NODO_SDN_CONFIG 3
 
 //funciones para crear paquete de Discovery hybrid topologies

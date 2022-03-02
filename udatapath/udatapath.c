@@ -81,14 +81,23 @@ uint64_t time_init_local_port = 0;
 uint64_t time_init_cicle = 0;
 uint8_t conection_status_ofp_controller = 0;
 uint64_t time_connect_to_contoller = 0;
+uint64_t time_exploration = 0;
 uint32_t old_local_port = 0;
 uint64_t time_no_move_local_port = 0;
+uint64_t convergence_time = 0;
+uint64_t time_start = 0;
+uint8_t log_escrito = 0;
+uint64_t timestamp_connecto_to_controller = 0;
+uint64_t packet_time = 0;
 int num_pkt_ehddp_req = 0;
 int num_pkt_ehddp_rep = 0;
 int num_pkt_arp_rep = 0;
 int num_pkt_arp_req = 0;
 uint64_t time_to_connect = 0;
 bool Reply_ON = false;
+uint8_t type_device_general;
+int port_to_controller = 0;
+bool controller_connected = false;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -257,6 +266,7 @@ parse_options(struct datapath *dp, int argc, char *argv[])
         {"help",        no_argument, 0, 'h'},
         {"version",     no_argument, 0, 'V'},
         {"ip-inband",  required_argument, 0, 'I'}, //Modificación UAH
+        {"type-device", required_argument, 0, 'T'}, //Modificación UAH
         {"no-slicing",  no_argument, 0, OPT_NO_SLICING},
         {"mfr-desc",    required_argument, 0, OPT_MFR_DESC},
         {"hw-desc",     required_argument, 0, OPT_HW_DESC},
@@ -335,6 +345,11 @@ parse_options(struct datapath *dp, int argc, char *argv[])
             ip_de_control_in_band.s_addr = dp_set_ip_addr(ip_aux_init);
             inet_ntop(AF_INET, &ip_de_control_in_band, ip_aux_init, INET_ADDRSTRLEN);
             local_port = NULL;
+            break;
+        
+        case 'T':
+            type_device_general = atoi(optarg);
+            VLOG_INFO(THIS_MODULE,"Tipo de Dispostivio: %u", type_device_general);
             break;
         /*Fin modificación*/
 

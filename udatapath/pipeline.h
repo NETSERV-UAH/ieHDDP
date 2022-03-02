@@ -40,21 +40,28 @@ extern struct mac_to_port bt_table, learning_table;
 extern bool local_port_ok;
 extern uint8_t conection_status_ofp_controller;
 extern uint64_t time_connect_to_contoller;
+extern uint64_t time_exploration;
 extern struct in_addr ip_if;
 extern uint32_t old_local_port;
 extern struct in_addr ip_de_control_in_band;
 extern uint64_t time_no_move_local_port;
+extern uint64_t convergence_time;
+extern uint64_t time_start;
 extern int num_pkt_ehddp_req ;
 extern int num_pkt_ehddp_rep ;
 extern int num_pkt_arp_rep ;
 extern int num_pkt_arp_req ;
 extern uint64_t time_to_connect;
+extern uint64_t packet_time;
+extern uint8_t type_device_general;
+extern bool controller_connected;
+extern int port_to_controller;
 
 //tiempo de vida del controlador en la tabla de controladores debe ser mas 
 //pequeño que el tiempo entre refresco del controlador
 #define BT_TIME 20
-#define BT_TIME_PKT 1500
-#define LT_TIME 1500
+#define BT_TIME_PKT 4500
+#define LT_TIME 4500
 #define Time_wait_local_port 3
 
 /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/

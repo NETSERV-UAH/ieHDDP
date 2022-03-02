@@ -217,7 +217,7 @@ struct packet * create_ehddp_reply_packet(struct datapath *dp, uint8_t * mac_dst
 uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_mac){
     uint8_t configuration = 0b01111111;
     uint8_t device_mac [ETH_ADDR_LEN];
-    uint16_t type_device = htons(NODO_SDN_CONFIG), num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
+    uint16_t type_device = 0, num_elements=pkt->handle_std->proto->ehddp->num_devices + 1;
     uint32_t in_port = htonl(pkt->in_port), out_port_update=0;
     uint64_t id_sdn = bigtolittle64(pkt->dp->id);
 
@@ -230,6 +230,11 @@ uint16_t update_data_msg(struct packet * pkt, uint32_t out_port,  uint8_t * nxt_
         out_port = 255;
 
     out_port_update = htonl(out_port);
+
+    if (type_device_general == 1 || type_device_general == 3)
+        type_device = htons(NODO_SDN_CONFIG);
+    else
+        type_device = htons(NODO_NO_SDN);
 
     //Modificamos El buffer primero y luego mi trabla
         /*Introducimos el valor del campo en el paquete */
