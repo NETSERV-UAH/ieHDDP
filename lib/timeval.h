@@ -62,5 +62,6 @@ time_t time_now(void);
 long long int time_msec(void);
 void time_alarm(unsigned int secs);
 int time_poll(struct pollfd *, int n_pollfds, int timeout);
+long long int current_timestamp(void);
 
 #endif /* timeval.h */

@@ -227,3 +227,9 @@ unblock_sigalrm(const sigset_t *oldsigs)
         ofp_fatal(errno, "sigprocmask");
     }
 }
+
+long long int current_timestamp(void) {
+    struct timeval te; 
+    gettimeofday(&te, NULL); // get current time
+    return ((long long int) (te.tv_sec*1000LL + te.tv_usec/1000)); // calculate milliseconds
+}
