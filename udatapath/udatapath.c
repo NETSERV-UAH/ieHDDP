@@ -77,6 +77,7 @@ static char * ip_aux_init = NULL;
 uint8_t old_local_port_MAC[ETH_ADDR_LEN]; //Almacena la antigua MAC del puerto que se configura como local para poder volver a asignarsela en caso de que cambie el puerto local.
 bool local_port_ok = false;
 struct in_addr ip_de_control_in_band;
+struct in_addr ip_del_controlller;
 uint64_t time_init_local_port = 0;
 uint64_t time_init_cicle = 0;
 uint8_t conection_status_ofp_controller = 0;
@@ -98,6 +99,7 @@ bool Reply_ON = false;
 uint8_t type_device_general;
 int port_to_controller = 0;
 bool controller_connected = false;
+bool port_to_controller_configurated = false;
 /*FIN Modificacion UAH Discovery hybrid topologies, JAH-*/
 
 /* Need to treat this more generically */
@@ -267,6 +269,7 @@ parse_options(struct datapath *dp, int argc, char *argv[])
         {"version",     no_argument, 0, 'V'},
         {"ip-inband",  required_argument, 0, 'I'}, //Modificación UAH
         {"type-device", required_argument, 0, 'T'}, //Modificación UAH
+        {"ip-controller", required_argument, 0, 'C'}, //Modificación UAH
         {"no-slicing",  no_argument, 0, OPT_NO_SLICING},
         {"mfr-desc",    required_argument, 0, OPT_MFR_DESC},
         {"hw-desc",     required_argument, 0, OPT_HW_DESC},
@@ -336,6 +339,8 @@ parse_options(struct datapath *dp, int argc, char *argv[])
 
         case 'L':
             local_port = optarg;
+            port_to_controller_configurated = true;
+            VLOG_INFO(THIS_MODULE,"Puerto Local: %s", local_port);
             break;
 
         /*Modificación UAH*/
@@ -344,12 +349,22 @@ parse_options(struct datapath *dp, int argc, char *argv[])
             VLOG_INFO(THIS_MODULE,"IP de control: %s", ip_aux_init);
             ip_de_control_in_band.s_addr = dp_set_ip_addr(ip_aux_init);
             inet_ntop(AF_INET, &ip_de_control_in_band, ip_aux_init, INET_ADDRSTRLEN);
-            local_port = NULL;
+            if (port_to_controller_configurated == false)
+                local_port = NULL;
             break;
         
         case 'T':
             type_device_general = atoi(optarg);
             VLOG_INFO(THIS_MODULE,"Tipo de Dispostivio: %u", type_device_general);
+            break;
+        
+        case 'C':
+            ip_aux_init = optarg;//quitar_espacios(optarg); 
+            VLOG_INFO(THIS_MODULE,"IP del controller: %s", ip_aux_init);
+            ip_del_controlller.s_addr = dp_set_ip_addr(ip_aux_init);
+            inet_ntop(AF_INET, &ip_del_controlller, ip_aux_init, INET_ADDRSTRLEN);
+            if (port_to_controller_configurated == false)
+                local_port = NULL;
             break;
         /*Fin modificación*/
 

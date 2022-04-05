@@ -167,7 +167,7 @@ call_local_port_changed_callbacks(struct port_watcher *pw)
         strcpy(pw->local_port_name, name);
     }
     else
-        VLOG_INFO(LOG_MODULE, "UAH -> (pw->local_port_name -> \"%s\".", pw->local_port_name);
+        VLOG_INFO(LOG_MODULE, "UAH -> pw->local_port_name -> \"%s\".", pw->local_port_name);
 
     /* Invoke callbacks. */
     for (i = 0; i < pw->n_local_cbs; i++)

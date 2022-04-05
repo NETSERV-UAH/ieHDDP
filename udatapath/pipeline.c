@@ -128,26 +128,19 @@ pipeline_process_packet(struct pipeline *pl, struct packet *pkt) {
 
     resent_packet_ehddp = ehddp_mod_local_port (pkt);
     
-    /*if ((pkt->handle_std->proto->eth->eth_type== ETH_TYPE_EHDDP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_EHDDP_INV) 
-        && (pkt->dp->id > 1)){
-            //Quiero manejar diferente los reply a ver que pasa
-            VLOG_INFO(LOG_MODULE, "pkt->handle_std->proto->ehddp->opcode = %d", pkt->handle_std->proto->ehddp->opcode);
-        if (pkt->handle_std->proto->ehddp->opcode == 2){
-            VLOG_INFO(LOG_MODULE, "Entro en code 2");
-            handle_ehddp_reply_packets(pkt);
-        }
-    }*/
-
     /*Fin Modificacion UAH Discovery hybrid topologies, JAH-*/
 
    	if ((pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV)) 
 	{
         VLOG_DBG(LOG_MODULE, "El paquete recibido es un paquete ARP.");
-        if(eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst)){
-            //necesitamos tratar los bcast de forma distinta para poder comunicar con el controller
+        if (htons(pkt->handle_std->proto->arp->ar_op) == 1 && pkt->handle_std->proto->arp->ar_tpa == ip_de_control_in_band.s_addr){
+            /*Aumentamos el estadisitico de ARP Request*/
+            num_pkt_arp_req++;
             pipeline_arp_path(pkt);
-            packet_destroy(pkt);
-            return ;
+        }
+        else if(htons(pkt->handle_std->proto->arp->ar_op) == 2 && pkt->handle_std->proto->arp->ar_spa == ip_de_control_in_band.s_addr){
+            /*Aumentamos el estadisitico de ARP Replay*/
+            num_pkt_arp_rep++;             
         }
     }
     
@@ -813,6 +806,7 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt, uint8_t resent_packet_e
     int table_port = 0; //varible auxiliar para puertp
     int send_ehddp_packet = 0; //1 only request paquet; 2 only reply packet;
     int num_ports = 0; //numero de puertos disponibles
+    struct packet * cpy_pkt; //forzamos el envio al controller para que mande arp
 
     VLOG_INFO(LOG_MODULE, "Calculamos el puerto de entrada y el numero de puertos disponible");
     num_ports = num_port_available(pkt->dp);
@@ -851,6 +845,12 @@ uint8_t handle_ehddp_request_packets(struct packet *pkt, uint8_t resent_packet_e
     //disponibles para reenviar el paquete
     else if(send_ehddp_packet == 1) 
     {
+        //Mandamos al controlador para forzar el arp
+        cpy_pkt = packet_clone(pkt);
+        send_packet_to_controller(pkt->dp->pipeline, pkt, pkt->table_id, OFPR_NO_MATCH);
+        VLOG_INFO(LOG_MODULE, "Se ha enviado un copia del eHDDP al controller para forzar el envio del ARP al controlador");
+        packet_destroy(cpy_pkt);
+
         /*continamos nosotros haciendo el proceso*/
         update_data_msg(pkt, (uint32_t) OFPP_FLOOD, pkt->handle_std->proto->ehddp->nxt_mac);
         VLOG_INFO(LOG_MODULE,"Update number of jump: %d ", pkt->handle_std->proto->ehddp->num_devices);
@@ -962,16 +962,6 @@ void pipeline_arp_path(struct packet *pkt)
 
 	if (pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP || pkt->handle_std->proto->eth->eth_type == ETH_TYPE_ARP_INV) 
 	{
-
-        if (htons(pkt->handle_std->proto->arp->ar_op) == 1){
-            /*Aumentamos el estadisitico de ARP Request*/
-            num_pkt_arp_req++;
-        }
-        else{
-            /*Aumentamos el estadisticio de ARP Reply*/
-             num_pkt_arp_rep++;
-        }
-
         puerto_mac = mac_to_port_found_port(&learning_table, pkt->handle_std->proto->eth->eth_src, 0);
         VLOG_INFO(LOG_MODULE, "Puerto_mac = %d | pkt->in_port = %d", puerto_mac, pkt->in_port);
         if (eth_addr_is_broadcast(pkt->handle_std->proto->eth->eth_dst) || eth_addr_is_multicast(pkt->handle_std->proto->eth->eth_dst))
@@ -990,23 +980,28 @@ void pipeline_arp_path(struct packet *pkt)
 				return;
 			}
             /*Se lo mandamos al controlador tambien para que tenga notificación de ello, solo si somos un SDN*/
-            if (type_device_general != 2 && controller_connected == true){
+            if (type_device_general != 2) { //} && controller_connected == true){
                 cpy_pkt = packet_clone(pkt);
                 send_packet_to_controller(pkt->dp->pipeline, pkt, pkt->table_id, OFPR_NO_MATCH);
                 VLOG_INFO(LOG_MODULE, "Se ha enviado un copia del ARP al controller para su aprendizaje");
                 packet_destroy(cpy_pkt);
             }
             VLOG_INFO(LOG_MODULE, "Se guarda correctamente todo pasamos a hacer el broadcast del ARP");
+
+            VLOG_INFO(LOG_MODULE, "ar_tpa = %u | ar_tpa=%u | s_addr = %u", pkt->handle_std->proto->arp->ar_tpa, 
+                htonl(pkt->handle_std->proto->arp->ar_tpa), ip_del_controlller.s_addr);
             //dependiendo del arp puedo sacarlo por el puerto del controlador
-            if (pkt->handle_std->proto->arp->ar_tpa != ip_de_control_in_band.s_addr)
+            if (pkt->handle_std->proto->arp->ar_tpa != ip_del_controlller.s_addr)
             {
                 VLOG_INFO(LOG_MODULE, "La IP NO es la del CONTROLLER se envia por FLOOD");
 			    dp_actions_output_port(pkt, OFPP_FLOOD, pkt->out_queue, pkt->out_port_max_len, 0xffffffffffffffff);
             }
             else{
                 VLOG_INFO(LOG_MODULE, "La IP SI es la del CONTROLLER se envia por %d", port_to_controller);
-                dp_actions_output_port(pkt, port_to_controller, pkt->out_queue, pkt->out_port_max_len, 0xffffffffffffffff);
+                //dp_actions_output_port(pkt, port_to_controller, pkt->out_queue, pkt->out_port_max_len, 0xffffffffffffffff);
+                VLOG_INFO(LOG_MODULE, "PERO SE LO DEJAMOS A SDN QUE YA TIENE LA REGLA");
             }
+            return;
         }
         else 
         {

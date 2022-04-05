@@ -44,6 +44,7 @@ extern uint64_t time_exploration;
 extern struct in_addr ip_if;
 extern uint32_t old_local_port;
 extern struct in_addr ip_de_control_in_band;
+extern struct in_addr ip_del_controlller;
 extern uint64_t time_no_move_local_port;
 extern uint64_t convergence_time;
 extern uint64_t time_start;

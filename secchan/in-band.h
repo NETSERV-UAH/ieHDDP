@@ -32,6 +32,7 @@
 #define IDLE_ARP_RULE_TIMEOUT 300 //Segundos máximos sin utilizar la regla ARP
 
 extern uint64_t time_start_process;
+extern struct in_addr *local_ip_ehddp;
 /*+++FIN+++*/
 
 struct port_watcher;

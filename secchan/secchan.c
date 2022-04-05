@@ -58,6 +58,7 @@
 #include "../oflib/ofl-structs.h"
 
 uint64_t time_start_process = 0;
+struct in_addr *local_ip_ehddp;
 
 bool in_band_rules = false; // Flag que indica si se han instalado las reglas in-band
 uint16_t of_port = 0;
@@ -247,6 +248,9 @@ int main(int argc, char *argv[])
         struct relay *r, *n;
         size_t i;
 
+        //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: get_pw_local_port_number_UAH(pw) %d", get_pw_local_port_number_UAH(pw));
+        //VLOG_WARN(LOG_MODULE, "[SECCHAN MAIN]: rconn_is_connected(remote_rconn) %d", rconn_is_connected(local_rconn));
+
         /*Modificacion UAH*/
         if (rconn_is_connected(local_rconn) && rconn_is_connected(remote_rconn) && !controller_connected_comunicate)
         {
@@ -312,7 +316,6 @@ int main(int argc, char *argv[])
             }
         }
         //Modificaciones UAH//
-        
         if (s.in_band && !in_band_rules && get_pw_local_port_number_UAH(pw) && rconn_is_connected(local_rconn))
         {
             //of_port = get_of_port_UAH(s.controller_names[0]);  // Se obtiene el puerto al que se establece la conexión OpenFlow

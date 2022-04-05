@@ -553,15 +553,23 @@ dp_ports_add_local(struct datapath *dp, const char *netdev)
         uint8_t ea[ETH_ADDR_LEN];
         struct sw_port *port;
         int error;
+        //modificacion uah
+        uint8_t mac[ETH_ADDR_LEN];
+        /*+++FIN+++*/
 
         port = xcalloc(1, sizeof *port);
         eth_addr_from_uint64(dp->id, ea);
         error = new_port(dp, port, OFPP_LOCAL, netdev, ea, 0);
+        VLOG_WARN(LOG_MODULE, "[dp_ports_add_local]: ERROR -> %d", error);
         if (!error) {
+            dp->local_port = port;
             /*Modificación UAH*/
             time_init_local_port = time_msec();
-            /*+++FIN+++*/
-            dp->local_port = port;
+            eth_addr_from_uint64(dp->id, mac);
+            //se envia el dato arriba para ver que todo ha ido bien
+            error = send_new_localport_packet_UAH(dp, port->conf->port_no, port->conf->name, mac, old_local_port, &time_init_local_port); 
+            //*+++FIN+++*/
+            VLOG_WARN(LOG_MODULE, "[CONFIGURE NEW LOCAL PORT]: Mensaje enviado con codigo de ERROR -> %d", error);
         } else {
             free(port);
         }

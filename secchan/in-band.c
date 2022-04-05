@@ -184,7 +184,8 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
         uint32_t *new_local_port, *old_local_port;
         uint8_t mac[ETH_ADDR_LEN];//, *char_size;
         char ip_char[INET_ADDRSTRLEN]; //,*port_name;
-        struct in_addr *local_ip_ehddp, controller_ip;
+        //struct in_addr *local_ip_ehddp, controller_ip;
+        struct in_addr controller_ip;
         uint8_t *char_size;
         char * port_name;
         uint64_t *aux_timer;
@@ -252,20 +253,40 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
 
         VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: Paquete de notificación ARP recibido");
 
-        //if (arp->ar_tpa == rconn_get_ip(in_band->controller) && 
-        if (!eth_addr_equals(arp->ar_sha, netdev_get_etheraddr(in_band->of_device))) //Se comprueba si la IP buscada es la del Controlador
-        {
-            
+        //Se comprueba si la IP buscada es la del Controlador //OJO CON ESTO HAY QUE VERLO BIEN
+        //eth_addr_equals(arp->ar_sha, netdev_get_etheraddr(in_band->of_device)) ||
+        if (!eth_addr_equals(arp->ar_sha, netdev_get_etheraddr(in_band->of_device)))
+        {   
             VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: Creamos regla para controlar los ARPs");    
             in_band_learn_mac(in_band, in_port, eth->eth_src); //Aprende la mac del salto anterior
 
             memcpy(flow_inv.dl_dst, eth->eth_src, ETH_ADDR_LEN); // MAC switch origen como destino
+            flow_inv.dl_type = eth->eth_type;
+
             VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: flow_inv.dl_type = %u | Mac_dst : %X:%X:%X:%X:%X:%X",
                 flow_inv.dl_type, flow_inv.dl_dst[0],flow_inv.dl_dst[1],flow_inv.dl_dst[2],flow_inv.dl_dst[3],flow_inv.dl_dst[4],flow_inv.dl_dst[5]);
             
             queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, buffer_id, in_port, OFP_FLOW_PERMANENT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
             VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: regla para controlar los ARPs enviada correctamente");    
-           
+        }
+        else if (local_ip_ehddp != NULL){
+            VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: arp->ar_tpa: %u | local_ip_ehddp->s_addr = %u", arp->ar_tpa, local_ip_ehddp->s_addr);
+            if ((arp->ar_tpa == local_ip_ehddp->s_addr) || (arp->ar_spa == local_ip_ehddp->s_addr))
+            {   
+                VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: Creamos regla para controlar los ARPs");    
+                in_band_learn_mac(in_band, in_port, eth->eth_src); //Aprende la mac del salto anterior
+
+                memcpy(flow_inv.dl_dst, eth->eth_src, ETH_ADDR_LEN); // MAC switch origen como destino
+                flow_inv.dl_type = eth->eth_type;
+
+                VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: flow_inv.dl_type = %u | Mac_dst : %X:%X:%X:%X:%X:%X",
+                    flow_inv.dl_type, flow_inv.dl_dst[0],flow_inv.dl_dst[1],flow_inv.dl_dst[2],flow_inv.dl_dst[3],flow_inv.dl_dst[4],flow_inv.dl_dst[5]);
+                
+                queue_tx(rc, in_band, make_add_simple_flow(&flow_inv, buffer_id, in_port, OFP_FLOW_PERMANENT, RULE_PRIORITY)); // Regla para el tráfico de vuelta
+                VLOG_INFO(LOG_MODULE, "[in_band_local_packet_cb]: regla para controlar los ARPs enviada correctamente"); 
+
+                return false; //esta paquete no debe llegar al controller
+            }
         }
         else
         {
@@ -306,10 +327,14 @@ in_band_local_packet_cb(struct relay *r, void *in_band_)
             queue_tx(rc, in_band, make_buffered_packet_out(oflpi->buffer_id, in_port, out_port));
         }*/
     }
-    else
+    else if (eth->eth_type == htons(ETH_TYPE_EHDDP)){
+        VLOG_WARN(LOG_MODULE, "[IN BAND LOCAL PACKET CB ETH_TYPE_IP]: PAQUETE EHDDP DETECTADO, ENVIAMOS AL CONTROLLER");
+        return true;
+    }
+    /*else
     {
         return false;
-    }
+    }*/
 
     return true;
 }
@@ -485,7 +510,7 @@ void install_ehddp_rules(struct rconn *local_rconn){
 
     ehddp_flow.dl_type = htons(ETH_TYPE_EHDDP);
     //Regla para enviar los paquetes eHDDP al controlador
-    rconn_send(local_rconn, make_add_simple_flow(&ehddp_flow, buffer_id, OFPP_CONTROLLER, OFP_FLOW_PERMANENT, CTRL_PRIORITY), NULL);
+    rconn_send(local_rconn, make_add_simple_flow(&ehddp_flow, buffer_id, OFPP_CONTROLLER, 2, CTRL_PRIORITY), NULL);
 }
 
 void install_drop_rules(struct rconn *local_rconn, uint32_t local_port_no, const uint8_t * mac)
